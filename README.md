@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/readme/hero_banner.png" alt="hebbmem" width="100%">
+</p>
+
 # hebbmem
 
 Hebbian memory for AI agents — memories that fire together wire together.
@@ -38,6 +42,10 @@ for r in results:
 ## How It Works
 
 hebbmem replaces flat vector storage with three neuroscience mechanisms:
+
+<p align="center">
+  <img src="assets/readme/how_it_works.png" alt="Three mechanisms" width="100%">
+</p>
 
 **Decay** — Memories fade over time unless reinforced, following the Ebbinghaus forgetting curve. Recent and frequently accessed memories stay strong.
 
@@ -102,6 +110,10 @@ logging.basicConfig(level=logging.DEBUG)
 ```
 
 ## Benchmark
+
+<p align="center">
+  <img src="assets/readme/benchmark_results.png" alt="Benchmark results" width="80%">
+</p>
 
 hebbmem outperforms flat vector search (pure cosine similarity) on key scenarios:
 
