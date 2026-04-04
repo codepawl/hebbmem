@@ -4,6 +4,16 @@ All notable changes to hebbmem will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.0] - 2026-04-04
+
+### Added
+- Benchmark suite in `benchmarks/` comparing hebbmem vs flat vector search
+- 4 scenarios: temporal relevance, associative recall, noise filtering, contradiction handling
+- Metrics: precision@k, MRR, associative hit rate
+- Entry point: `uv run python benchmarks/run_benchmark.py`
+- Benchmark README with methodology and reproduction instructions
+- Results table in project README
+
 ## [0.2.0] - 2026-04-04
 
 ### Added

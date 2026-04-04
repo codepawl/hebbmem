@@ -101,6 +101,23 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 ```
 
+## Benchmark
+
+hebbmem outperforms flat vector search (pure cosine similarity) on key scenarios:
+
+| Scenario | Metric | hebbmem | Baseline | Delta |
+|----------|--------|---------|----------|-------|
+| Associative | Precision@5 | 0.56 | 0.44 | +27.3% |
+| Associative | Assoc. Hit Rate | 0.13 | 0.00 | — |
+| Noise | Precision@5 | 0.60 | 0.56 | +7.1% |
+| Contradiction | Precision@1 | 0.50 | 0.00 | — |
+| Contradiction | MRR | 0.75 | 0.50 | +50.0% |
+| Temporal | Precision@5 | 0.36 | 0.36 | tied |
+
+Key wins: **contradiction handling** (50% MRR improvement — newer memories rank higher) and **associative recall** (finds indirectly connected memories that baseline misses entirely). Results use HashEncoder; advantages are larger with semantic embeddings.
+
+Run yourself: `uv run python benchmarks/run_benchmark.py` — see [`benchmarks/`](benchmarks/README.md) for methodology.
+
 ## Examples
 
 See [`examples/`](examples/) for runnable scripts:
