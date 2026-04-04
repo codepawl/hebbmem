@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>hebbmem — Memory Visualization</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0a0f;
+  color: #c8c8d0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+#header {
+  padding: 12px 20px;
+  border-bottom: 1px solid #1a1a2e;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+#header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e0e0e8;
+  letter-spacing: -0.3px;
+}
+#header h1 span { color: #6c8aff; }
+#stats {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 12px;
+  color: #666;
+}
+#graph-container {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+svg { width: 100%; height: 100%; }
+#controls {
+  padding: 12px 20px;
+  border-top: 1px solid #1a1a2e;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+input[type="text"] {
+  background: #12121f;
+  border: 1px solid #2a2a3e;
+  color: #e0e0e8;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+input[type="text"]:focus { border-color: #6c8aff; }
+#store-input { width: 260px; }
+#recall-input { width: 200px; }
+select {
+  background: #12121f;
+  border: 1px solid #2a2a3e;
+  color: #e0e0e8;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  outline: none;
+}
+button {
+  background: #1e1e32;
+  border: 1px solid #2a2a3e;
+  color: #c8c8d0;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+button:hover { background: #2a2a44; border-color: #3a3a5e; }
+button.primary { background: #2a3a6e; border-color: #4a5a9e; color: #c8d0ff; }
+button.primary:hover { background: #3a4a8e; }
+button.danger { border-color: #5a2a2a; }
+button.danger:hover { background: #3a1a1a; }
+.sep { width: 1px; height: 20px; background: #1a1a2e; margin: 0 4px; }
+#results-panel {
+  padding: 8px 20px 10px;
+  border-top: 1px solid #1a1a2e;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 12px;
+  max-height: 120px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+.result-item {
+  padding: 2px 0;
+  display: flex;
+  gap: 8px;
+}
+.result-item .score { color: #6c8aff; min-width: 50px; }
+.result-item .content { color: #999; }
+.tooltip {
+  position: absolute;
+  background: #16162a;
+  border: 1px solid #2a2a3e;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  max-width: 300px;
+  z-index: 100;
+}
+.tooltip .tt-content { color: #e0e0e8; margin-bottom: 4px; }
+.tooltip .tt-stats { color: #666; font-family: monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1><span>hebb</span>mem</h1>
+  <div id="stats">—</div>
+</div>
+
+<div id="graph-container">
+  <svg id="graph"></svg>
+</div>
+
+<div id="controls">
+  <input type="text" id="store-input" placeholder="Store a memory...">
+  <select id="importance-select">
+    <option value="0.9">imp: 0.9</option>
+    <option value="0.7">imp: 0.7</option>
+    <option value="0.5" selected>imp: 0.5</option>
+    <option value="0.3">imp: 0.3</option>
+    <option value="0.1">imp: 0.1</option>
+  </select>
+  <button class="primary" onclick="doStore()">Store</button>
+  <div class="sep"></div>
+  <input type="text" id="recall-input" placeholder="Recall query...">
+  <button class="primary" onclick="doRecall()">Recall</button>
+  <div class="sep"></div>
+  <button onclick="doStep(1)">Step &times;1</button>
+  <button onclick="doStep(5)">Step &times;5</button>
+  <button onclick="doStep(10)">Step &times;10</button>
+  <div class="sep"></div>
+  <button onclick="doLoadSample()">Load Sample</button>
+  <button class="danger" onclick="doReset()">Reset</button>
+</div>
+
+<div id="results-panel">
+  <div class="label" style="color:#555">Recall results appear here</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+const API = '';
+const svg = d3.select('#graph');
+const tooltipEl = document.getElementById('tooltip');
+const container = document.getElementById('graph-container');
+
+let simulation, linkGroup, nodeGroup, labelGroup;
+let graphData = { nodes: [], edges: [] };
+let activationMap = {};
+
+const C = {
+  inactive: '#2a3050',
+  active: '#ffa726',
+  seed: '#ffd54f',
+  spread: '#ff7043',
+  edge: '#1a1a2e',
+  edgeActive: '#ffd54f',
+  importance: '#ff5252',
+  text: '#555',
+};
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.textContent;
+}
+
+function init() {
+  const g = svg.append('g').attr('id', 'root');
+  svg.call(d3.zoom()
+    .scaleExtent([0.3, 4])
+    .on('zoom', (e) => g.attr('transform', e.transform)));
+
+  linkGroup = g.append('g').attr('class', 'links');
+  nodeGroup = g.append('g').attr('class', 'nodes');
+  labelGroup = g.append('g').attr('class', 'labels');
+
+  const w = container.clientWidth;
+  const h = container.clientHeight;
+
+  simulation = d3.forceSimulation()
+    .force('link', d3.forceLink().id(d => d.id).distance(100).strength(d => d.weight * 0.5))
+    .force('charge', d3.forceManyBody().strength(-200))
+    .force('center', d3.forceCenter(w / 2, h / 2))
+    .force('collide', d3.forceCollide().radius(d => nodeRadius(d) + 10))
+    .on('tick', ticked);
+
+  document.getElementById('store-input').addEventListener('keydown', e => { if (e.key === 'Enter') doStore(); });
+  document.getElementById('recall-input').addEventListener('keydown', e => { if (e.key === 'Enter') doRecall(); });
+
+  fetchGraph();
+}
+
+function nodeRadius(d) {
+  return 6 + d.strength * 14 + d.importance * 6;
+}
+
+function nodeColor(d) {
+  const act = activationMap[d.id] || d.activation;
+  if (act > 0.5) return d3.interpolateRgb(C.inactive, C.seed)(Math.min(act, 1));
+  if (act > 0.1) return d3.interpolateRgb(C.inactive, C.spread)(act * 2);
+  return d3.interpolateRgb('#181828', C.inactive)(Math.max(d.strength, 0.1));
+}
+
+function nodeGlow(d) {
+  const act = activationMap[d.id] || d.activation;
+  return act > 0.3 ? `0 0 ${act * 20}px ${C.active}` : 'none';
+}
+
+function updateGraph(data, animate) {
+  graphData = data;
+  const nodes = data.nodes;
+  const links = data.edges;
+
+  document.getElementById('stats').textContent =
+    `${data.stats.node_count} memories | ${data.stats.edge_count} connections | step ${data.stats.time_step}`;
+
+  // Links
+  const link = linkGroup.selectAll('line').data(links, d => {
+    const s = d.source.id || d.source;
+    const t = d.target.id || d.target;
+    return s < t ? s + '-' + t : t + '-' + s;
+  });
+  link.exit().transition().duration(300).attr('stroke-opacity', 0).remove();
+  const linkEnter = link.enter().append('line').attr('stroke', C.edge).attr('stroke-opacity', 0);
+  const linkMerge = linkEnter.merge(link);
+  linkMerge.transition().duration(animate ? 600 : 300)
+    .attr('stroke-width', d => 1 + d.weight * 4)
+    .attr('stroke-opacity', d => 0.1 + d.weight * 0.6)
+    .attr('stroke', d => d.co_activations > 0 ? '#3a4a6e' : C.edge);
+
+  // Nodes
+  const node = nodeGroup.selectAll('circle.node').data(nodes, d => d.id);
+  node.exit().transition().duration(300).attr('r', 0).remove();
+  const nodeEnter = node.enter().append('circle')
+    .attr('class', 'node')
+    .attr('r', 0)
+    .attr('stroke-width', 0)
+    .call(drag(simulation))
+    .on('mouseover', showTooltip)
+    .on('mousemove', moveTooltip)
+    .on('mouseout', hideTooltip);
+  nodeEnter.transition().duration(400).attr('r', nodeRadius);
+
+  const nodeMerge = nodeEnter.merge(node);
+  nodeMerge.transition().duration(animate ? 600 : 300)
+    .attr('r', nodeRadius)
+    .attr('fill', nodeColor)
+    .attr('stroke', d => d.importance > 0.5 ? C.importance : '#222')
+    .attr('stroke-width', d => d.importance > 0.5 ? 1 + d.importance * 2 : 0.5)
+    .style('filter', d => { const g = nodeGlow(d); return g !== 'none' ? 'drop-shadow(' + g + ')' : 'none'; });
+
+  // Labels
+  const label = labelGroup.selectAll('text').data(nodes, d => d.id);
+  label.exit().remove();
+  const labelEnter = label.enter().append('text')
+    .attr('text-anchor', 'middle')
+    .attr('dy', d => nodeRadius(d) + 14)
+    .attr('fill', C.text)
+    .attr('font-size', '10px');
+  labelEnter.merge(label)
+    .text(d => d.content.length > 25 ? d.content.slice(0, 25) + '...' : d.content);
+
+  simulation.nodes(nodes);
+  simulation.force('link').links(links);
+  simulation.alpha(0.3).restart();
+}
+
+function ticked() {
+  linkGroup.selectAll('line')
+    .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+  nodeGroup.selectAll('circle.node')
+    .attr('cx', d => d.x).attr('cy', d => d.y);
+  labelGroup.selectAll('text')
+    .attr('x', d => d.x).attr('y', d => d.y);
+}
+
+function drag(sim) {
+  return d3.drag()
+    .on('start', (e, d) => { if (!e.active) sim.alphaTarget(0.1).restart(); d.fx = d.x; d.fy = d.y; })
+    .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+    .on('end', (e, d) => { if (!e.active) sim.alphaTarget(0); d.fx = null; d.fy = null; });
+}
+
+function showTooltip(e, d) {
+  const act = activationMap[d.id] || d.activation;
+  const ttContent = tooltipEl.querySelector('.tt-content') || document.createElement('div');
+  const ttStats = tooltipEl.querySelector('.tt-stats') || document.createElement('div');
+  ttContent.className = 'tt-content';
+  ttContent.textContent = d.content;
+  ttStats.className = 'tt-stats';
+  ttStats.textContent = `activation: ${act.toFixed(3)}\nstrength: ${d.strength.toFixed(3)}\nimportance: ${d.importance}\naccessed: ${d.access_count}x`;
+  ttStats.style.whiteSpace = 'pre';
+  tooltipEl.replaceChildren(ttContent, ttStats);
+  tooltipEl.style.opacity = '1';
+}
+
+function moveTooltip(e) {
+  tooltipEl.style.left = (e.pageX + 12) + 'px';
+  tooltipEl.style.top = (e.pageY - 10) + 'px';
+}
+
+function hideTooltip() { tooltipEl.style.opacity = '0'; }
+
+function animateActivation(pre, post, seedIds) {
+  activationMap = {};
+  const seedSet = new Set(seedIds);
+
+  for (const id of seedIds) {
+    activationMap[id] = post[id] || 0;
+  }
+  nodeGroup.selectAll('circle.node')
+    .transition().duration(200)
+    .attr('fill', nodeColor)
+    .style('filter', d => { const g = nodeGlow(d); return g !== 'none' ? 'drop-shadow(' + g + ')' : 'none'; });
+
+  setTimeout(() => {
+    for (const [id, act] of Object.entries(post)) {
+      if (!seedSet.has(id) && act > (pre[id] || 0) + 0.01) {
+        activationMap[id] = act;
+      }
+    }
+    nodeGroup.selectAll('circle.node')
+      .transition().duration(400)
+      .attr('fill', nodeColor)
+      .style('filter', d => { const g = nodeGlow(d); return g !== 'none' ? 'drop-shadow(' + g + ')' : 'none'; });
+
+    linkGroup.selectAll('line')
+      .filter(d => {
+        const sId = d.source.id || d.source;
+        const tId = d.target.id || d.target;
+        return activationMap[sId] > 0.1 && activationMap[tId] > 0.1;
+      })
+      .transition().duration(200)
+      .attr('stroke', C.edgeActive)
+      .attr('stroke-opacity', 0.9)
+      .transition().duration(600)
+      .attr('stroke', d => d.co_activations > 0 ? '#3a4a6e' : C.edge)
+      .attr('stroke-opacity', d => 0.1 + d.weight * 0.6);
+  }, 300);
+
+  setTimeout(() => { activationMap = {}; }, 1500);
+}
+
+function renderResults(results) {
+  const panel = document.getElementById('results-panel');
+  panel.replaceChildren();
+  if (results.length === 0) {
+    const div = document.createElement('div');
+    div.style.color = '#555';
+    div.textContent = 'No results';
+    panel.appendChild(div);
+    return;
+  }
+  for (const r of results) {
+    const row = document.createElement('div');
+    row.className = 'result-item';
+    const score = document.createElement('span');
+    score.className = 'score';
+    score.textContent = r.score.toFixed(3);
+    const content = document.createElement('span');
+    content.className = 'content';
+    content.textContent = r.content;
+    row.appendChild(score);
+    row.appendChild(content);
+    panel.appendChild(row);
+  }
+}
+
+function setResultsMessage(msg) {
+  const panel = document.getElementById('results-panel');
+  panel.replaceChildren();
+  const div = document.createElement('div');
+  div.style.color = '#555';
+  div.textContent = msg;
+  panel.appendChild(div);
+}
+
+async function fetchGraph() {
+  const res = await fetch(API + '/graph');
+  const data = await res.json();
+  updateGraph(data, false);
+}
+
+async function doStore() {
+  const input = document.getElementById('store-input');
+  const content = input.value.trim();
+  if (!content) return;
+  const importance = document.getElementById('importance-select').value;
+  const res = await fetch(API + '/store?content=' + encodeURIComponent(content) + '&importance=' + importance, { method: 'POST' });
+  const data = await res.json();
+  input.value = '';
+  updateGraph(data.graph, true);
+}
+
+async function doRecall() {
+  const input = document.getElementById('recall-input');
+  const query = input.value.trim();
+  if (!query) return;
+  const res = await fetch(API + '/recall?query=' + encodeURIComponent(query), { method: 'POST' });
+  const data = await res.json();
+  renderResults(data.results);
+  const seedIds = data.results.map(r => r.id);
+  updateGraph(data.graph, true);
+  animateActivation(data.pre_activations, data.post_activations, seedIds);
+}
+
+async function doStep(n) {
+  const res = await fetch(API + '/step?n=' + n, { method: 'POST' });
+  const data = await res.json();
+  updateGraph(data.graph, true);
+}
+
+async function doLoadSample() {
+  const res = await fetch(API + '/load-sample', { method: 'POST' });
+  const data = await res.json();
+  svg.transition().duration(500).call(d3.zoom().transform, d3.zoomIdentity);
+  updateGraph(data.graph, true);
+  setResultsMessage('Sample loaded — try recalling "Project Atlas"');
+}
+
+async function doReset() {
+  const res = await fetch(API + '/reset', { method: 'POST' });
+  const data = await res.json();
+  svg.transition().duration(500).call(d3.zoom().transform, d3.zoomIdentity);
+  updateGraph(data.graph, false);
+  setResultsMessage('Memory cleared');
+  activationMap = {};
+}
+
+init();
+</script>
+</body>
+</html>
