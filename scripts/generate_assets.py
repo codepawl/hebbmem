@@ -1018,37 +1018,86 @@ def gen_x_thread_2() -> None:
 
 
 def gen_x_thread_3() -> None:
-    fig = plt.figure(figsize=(16, 9), facecolor=C["bg"])
-    ax = fig.add_axes([0.12, 0.15, 0.78, 0.62])
+    """Horizontal bar chart for X thread — same style as benchmark_results."""
+    scenarios = [
+        "Associative",
+        "Contradiction",
+        "Noise",
+        "Temporal",
+    ]
+    hv = [0.56, 0.50, 0.60, 0.36]
+    bv = [0.44, 0.00, 0.56, 0.36]
+    met = ["P@5", "P@1", "P@5", "P@5"]
+    deltas = ["+27%", "unique", "+7%", "tied"]
+
+    fig, ax = plt.subplots(figsize=(16, 9), facecolor=C["bg"])
     ax.set_facecolor(C["bg"])
 
-    scenarios = ["Associative", "Contradiction", "Noise", "Temporal"]
-    hv = [0.56, 0.50, 0.60, 0.36]
-    bvals = [0.44, 0.00, 0.56, 0.36]
+    y = np.arange(len(scenarios))
+    h = 0.35
 
-    x = np.arange(len(scenarios))
-    w = 0.35
-    ax.bar(
-        x - w / 2,
+    ax.barh(
+        y + h / 2,
         hv,
-        w,
+        h,
         label="hebbmem",
         color=C["green"],
         alpha=0.9,
     )
-    ax.bar(
-        x + w / 2,
-        bvals,
-        w,
+    ax.barh(
+        y - h / 2,
+        bv,
+        h,
         label="Baseline",
         color=C["red"],
         alpha=0.5,
     )
-    ax.set_xticks(x)
-    ax.set_xticklabels(scenarios, fontsize=16)
-    ax.set_ylabel("Precision", fontsize=16)
+
+    for i in range(len(scenarios)):
+        ax.text(
+            hv[i] + 0.02,
+            y[i] + h / 2,
+            f"{hv[i]:.2f}  {deltas[i]}",
+            va="center",
+            fontsize=18,
+            color=C["gold"],
+            fontweight="bold",
+        )
+        if bv[i] > 0:
+            ax.text(
+                bv[i] + 0.02,
+                y[i] - h / 2,
+                f"{bv[i]:.2f}",
+                va="center",
+                fontsize=14,
+                color=C["text_dim"],
+            )
+
+    ax.set_yticks(y)
+    ax.set_yticklabels(
+        [f"{s}\n({m})" for s, m in zip(scenarios, met, strict=True)],
+        fontsize=18,
+    )
+    ax.set_xlabel("Score", fontsize=18)
+    ax.set_xlim(0, 0.90)
+    ax.set_title(
+        "hebbmem vs Flat Vector Search",
+        fontsize=28,
+        fontweight="bold",
+        pad=20,
+    )
+    ax.text(
+        0.5,
+        -0.10,
+        "Precision@K across 4 synthetic scenarios",
+        fontsize=16,
+        color=C["text2"],
+        ha="center",
+        transform=ax.transAxes,
+    )
     ax.legend(
-        fontsize=14,
+        loc="lower right",
+        fontsize=16,
         facecolor=C["bg_card"],
         edgecolor=C["edge"],
     )
@@ -1056,28 +1105,20 @@ def gen_x_thread_3() -> None:
         ax.spines[s].set_visible(False)
     for s in ["bottom", "left"]:
         ax.spines[s].set_color(C["edge"])
+    ax.grid(axis="x", color=C["edge"], alpha=0.3)
 
     fig.text(
         0.5,
-        0.86,
-        "hebbmem vs Flat Vector Search",
-        fontsize=32,
-        fontweight="bold",
-        color=C["text"],
-        ha="center",
-    )
-    fig.text(
-        0.5,
-        0.06,
+        0.02,
         "pip install hebbmem",
-        fontsize=20,
+        fontsize=22,
         color=C["gold"],
         ha="center",
         family="monospace",
     )
     fig.text(
         0.95,
-        0.03,
+        0.02,
         "hebbmem",
         fontsize=14,
         color=C["blue"],
@@ -1226,130 +1267,185 @@ def gen_architecture() -> None:
 
 
 def gen_comparison() -> None:
+    """Side-by-side: flat vector search vs hebbmem. Rebuilt from scratch."""
     fig, (ax_l, ax_r) = plt.subplots(
         1,
         2,
-        figsize=(12, 6),
+        figsize=(14, 7),
         facecolor=C["bg"],
     )
+    fig.subplots_adjust(wspace=0.08)
 
     for ax in (ax_l, ax_r):
         ax.set_facecolor(C["bg"])
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
         ax.set_aspect("equal")
         ax.axis("off")
 
-    # Left: flat vector search
-    ax_l.set_title(
+    # ── Left half: Flat Vector Search ──
+    ax_l.text(
+        0.5,
+        0.93,
         "Flat Vector Search",
-        fontsize=20,
+        fontsize=22,
         fontweight="bold",
-        color=C["text2"],
-        pad=12,
+        color=C["text_dim"],
+        ha="center",
+        transform=ax_l.transAxes,
     )
+
     rng = np.random.RandomState(42)
-    pts = rng.randn(12, 2) * 0.3
-    query = np.array([0.0, 0.0])
+    pts = rng.uniform(0.15, 0.85, (12, 2))
+    pts[:, 1] = pts[:, 1] * 0.55 + 0.25  # keep in mid area
+
     ax_l.scatter(
         pts[:, 0],
         pts[:, 1],
-        s=180,
-        c="#3a3a5a",
+        s=120,
+        c="#4a4a6a",
         edgecolors="#5a5a7a",
-        linewidths=1.5,
+        linewidths=1,
         zorder=3,
+        transform=ax_l.transAxes,
     )
+
+    # Query star
+    qx, qy = 0.45, 0.52
     ax_l.scatter(
-        [query[0]],
-        [query[1]],
-        s=300,
-        c="#8a8aaa",
+        [qx],
+        [qy],
+        s=400,
+        c="#b0b0d0",
         marker="*",
         zorder=5,
+        transform=ax_l.transAxes,
     )
     ax_l.text(
-        query[0] + 0.08,
-        query[1] + 0.08,
+        qx + 0.05,
+        qy + 0.03,
         "query",
-        fontsize=12,
+        fontsize=14,
         color=C["text2"],
+        transform=ax_l.transAxes,
     )
-    dists = np.linalg.norm(pts - query, axis=1)
+
+    # Dashed lines to 3 nearest
+    dists = np.sqrt((pts[:, 0] - qx) ** 2 + (pts[:, 1] - qy) ** 2)
     top3 = np.argsort(dists)[:3]
-    for i in top3:
+    for idx in top3:
         ax_l.plot(
-            [query[0], pts[i, 0]],
-            [query[1], pts[i, 1]],
-            color="#6a6a8a",
+            [qx, pts[idx, 0]],
+            [qy, pts[idx, 1]],
+            color="#7a7a9a",
             lw=2,
             ls="--",
+            transform=ax_l.transAxes,
+            zorder=2,
         )
-    labels_l = ["no decay", "no association", "cosine only"]
-    for i, lab in enumerate(labels_l):
+
+    # Labels
+    left_labels = ["no decay", "no association", "cosine only"]
+    for i, lab in enumerate(left_labels):
         ax_l.text(
-            0.5,
-            0.06 - i * 0.06,
+            0.08,
+            0.12 - i * 0.05,
             lab,
-            ha="center",
             fontsize=14,
             color=C["text_dim"],
             transform=ax_l.transAxes,
         )
 
-    # Divider
-    fig.patches.append(
-        mpatches.FancyBboxPatch(
-            (0.498, 0.1),
-            0.004,
-            0.8,
+    # ── Vertical divider ──
+    fig.add_artist(
+        plt.Line2D(
+            [0.50, 0.50],
+            [0.08, 0.92],
+            color=C["edge"],
+            lw=1,
+            ls="--",
             transform=fig.transFigure,
-            facecolor=C["edge"],
-            edgecolor="none",
         )
     )
 
-    # Right: hebbmem
-    ax_r.set_title(
+    # ── Right half: hebbmem ──
+    ax_r.text(
+        0.5,
+        0.93,
         "hebbmem",
-        fontsize=20,
+        fontsize=22,
         fontweight="bold",
         color=C["blue"],
-        pad=12,
+        ha="center",
+        transform=ax_r.transAxes,
     )
-    g = nx.watts_strogatz_graph(12, 3, 0.4, seed=42)
-    pos = nx.spring_layout(g, seed=42)
-    acts = rng.uniform(0.2, 1.0, 12)
-    colors = [
-        plt.cm.YlOrBr(a * 0.8 + 0.1)  # type: ignore[attr-defined]
-        for a in acts
+
+    # Cluster A (4 nodes)
+    ca = [(0.25, 0.65), (0.40, 0.72), (0.32, 0.52), (0.48, 0.58)]
+    # Cluster B (4 nodes)
+    cb = [(0.65, 0.68), (0.78, 0.60), (0.72, 0.48), (0.82, 0.72)]
+    # Scattered (4 nodes)
+    cs = [(0.20, 0.35), (0.55, 0.35), (0.75, 0.30), (0.45, 0.45)]
+
+    all_pos = ca + cb + cs
+    acts = [0.9, 0.7, 0.5, 0.4, 0.6, 0.5, 0.3, 0.4, 0.15, 0.2, 0.1, 0.25]
+
+    # Intra-cluster edges
+    edges = [
+        (0, 1),
+        (0, 2),
+        (1, 3),
+        (2, 3),  # cluster A
+        (4, 5),
+        (4, 6),
+        (5, 7),
+        (6, 7),  # cluster B
+        (3, 9),
+        (9, 4),  # bridge
     ]
-    nx.draw_networkx_edges(
-        g,
-        pos,
-        ax=ax_r,
-        edge_color=C["edge"],
-        width=1.5,
-        alpha=0.4,
-    )
-    nx.draw_networkx_nodes(
-        g,
-        pos,
-        ax=ax_r,
-        node_color=colors,
-        node_size=[200 + a * 300 for a in acts],
-        edgecolors=C["gold"],
-        linewidths=[a * 2 for a in acts],
-    )
-    labels_r = [
+
+    # Draw edges
+    for i, j in edges:
+        ax_r.plot(
+            [all_pos[i][0], all_pos[j][0]],
+            [all_pos[i][1], all_pos[j][1]],
+            color=C["edge"],
+            lw=1.5,
+            alpha=0.5,
+            transform=ax_r.transAxes,
+            zorder=1,
+        )
+
+    # Draw nodes
+    for (px, py), act in zip(all_pos, acts, strict=True):
+        col = plt.cm.YlOrBr(  # type: ignore[attr-defined]
+            act * 0.8 + 0.1,
+        )
+        sz = 80 + act * 200
+        ec = C["gold"] if act > 0.5 else C["edge"]
+        lw = 1 + act * 2
+        ax_r.scatter(
+            [px],
+            [py],
+            s=sz,
+            c=[col],
+            edgecolors=ec,
+            linewidths=lw,
+            zorder=3,
+            transform=ax_r.transAxes,
+        )
+
+    # Labels
+    right_labels = [
         "memories decay",
         "co-recall bonds",
         "activation spreads",
     ]
-    for i, lab in enumerate(labels_r):
+    for i, lab in enumerate(right_labels):
         ax_r.text(
-            0.5,
-            0.06 - i * 0.06,
+            0.08,
+            0.12 - i * 0.05,
             lab,
-            ha="center",
             fontsize=14,
             color=C["green"],
             transform=ax_r.transAxes,
@@ -1357,7 +1453,7 @@ def gen_comparison() -> None:
 
     fig.suptitle(
         "Why hebbmem?",
-        fontsize=26,
+        fontsize=28,
         fontweight="bold",
         color=C["text"],
         y=0.98,
