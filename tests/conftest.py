@@ -1,6 +1,5 @@
 """Shared fixtures for hebbmem tests."""
 
-import numpy as np
 import pytest
 
 from hebbmem.encoders import HashEncoder

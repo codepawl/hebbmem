@@ -1,43 +1,82 @@
-"""Pluggable encoder backends for hebbmem."""
+"""Pluggable encoder backends for hebbmem.
+
+Encoders convert text into fixed-dimension vectors (embeddings) used for
+cosine similarity in the memory graph. Two backends are provided:
+
+- ``SentenceTransformerEncoder``: High-quality semantic embeddings.
+  Requires ``pip install hebbmem[ml]``.
+- ``HashEncoder``: Zero-dependency fallback using the hashing trick.
+  Deterministic but not semantic — suitable for testing and prototyping.
+"""
 
 from __future__ import annotations
 
 import hashlib
+import logging
 from abc import ABC, abstractmethod
 
 import numpy as np
 
+from hebbmem.exceptions import EncoderError
+
+logger = logging.getLogger("hebbmem")
+
 
 class EncoderBackend(ABC):
-    """Base class for text-to-embedding encoders."""
+    """Abstract base class for text-to-embedding encoders.
+
+    Subclass this to create a custom encoder. Must implement
+    ``encode()``, ``encode_batch()``, and the ``dimension`` property.
+    """
 
     @abstractmethod
     def encode(self, text: str) -> np.ndarray:
-        """Encode text to a fixed-dimension float32 vector."""
+        """Encode text to a fixed-dimension float32 vector.
+
+        Args:
+            text: Input text string.
+
+        Returns:
+            Numpy float32 array of shape ``(dimension,)``.
+        """
         ...
 
     @abstractmethod
     def encode_batch(self, texts: list[str]) -> np.ndarray:
-        """Encode multiple texts. Returns shape (n, dim)."""
+        """Encode multiple texts in one call.
+
+        Args:
+            texts: List of input strings.
+
+        Returns:
+            Numpy float32 array of shape ``(len(texts), dimension)``.
+        """
         ...
 
     @property
     @abstractmethod
     def dimension(self) -> int:
+        """Embedding vector dimension."""
         ...
 
 
 class HashEncoder(EncoderBackend):
     """Zero-dependency encoder using the hashing trick.
 
-    Deterministic: same input always produces same vector.
-    Uses multiple hash seeds to fill a fixed-dimension vector,
-    then L2-normalizes so cosine similarity works correctly.
+    Produces deterministic, L2-normalized vectors by hashing tokens
+    into a fixed-dimension space. Not semantic — "cat" and "kitten"
+    will have unrelated vectors. Best for testing and environments
+    where sentence-transformers cannot be installed.
+
+    Args:
+        dimension: Output vector dimension. Higher = fewer hash collisions.
+        num_hashes: Hash seeds per token. More = denser vectors.
     """
 
     def __init__(self, dimension: int = 256, num_hashes: int = 4) -> None:
         self._dimension = dimension
         self._num_hashes = num_hashes
+        logger.info("Using encoder: HashEncoder (dimension=%d)", dimension)
 
     @property
     def dimension(self) -> int:
@@ -62,28 +101,63 @@ class HashEncoder(EncoderBackend):
 
 
 class SentenceTransformerEncoder(EncoderBackend):
-    """Quality encoder using sentence-transformers (optional dependency)."""
+    """Semantic encoder using sentence-transformers.
+
+    Produces high-quality embeddings where semantically similar texts
+    have high cosine similarity. Uses the ``all-MiniLM-L6-v2`` model
+    by default (384 dimensions, fast, good general-purpose quality).
+
+    Requires: ``pip install hebbmem[ml]``
+
+    Args:
+        model_name: HuggingFace model name or path.
+
+    Raises:
+        EncoderError: If sentence-transformers is not installed.
+    """
 
     def __init__(self, model_name: str = "all-MiniLM-L6-v2") -> None:
-        from sentence_transformers import SentenceTransformer
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as e:
+            raise EncoderError(
+                "sentence-transformers is required for SentenceTransformerEncoder. "
+                "Install with: pip install hebbmem[ml]"
+            ) from e
 
         self._model = SentenceTransformer(model_name)
-        self._dimension: int = self._model.get_sentence_embedding_dimension()
+        dim = self._model.get_sentence_embedding_dimension()
+        assert dim is not None
+        self._dimension: int = dim
+        logger.info(
+            "Using encoder: SentenceTransformerEncoder (model=%s, dimension=%d)",
+            model_name,
+            self._dimension,
+        )
 
     @property
     def dimension(self) -> int:
         return self._dimension
 
     def encode(self, text: str) -> np.ndarray:
-        return self._model.encode(text, convert_to_numpy=True).astype(np.float32)
+        raw = self._model.encode(text, convert_to_numpy=True)
+        result: np.ndarray = raw.astype(np.float32)
+        return result
 
     def encode_batch(self, texts: list[str]) -> np.ndarray:
-        return self._model.encode(texts, convert_to_numpy=True).astype(np.float32)
+        raw = self._model.encode(texts, convert_to_numpy=True)
+        result: np.ndarray = raw.astype(np.float32)
+        return result
 
 
 def auto_select_encoder() -> EncoderBackend:
-    """Return SentenceTransformerEncoder if available, else HashEncoder."""
+    """Return the best available encoder.
+
+    Tries ``SentenceTransformerEncoder`` first. If sentence-transformers
+    is not installed, falls back to ``HashEncoder`` with a warning.
+    """
     try:
         return SentenceTransformerEncoder()
-    except ImportError:
+    except EncoderError:
+        logger.warning("sentence-transformers not found, falling back to HashEncoder")
         return HashEncoder()

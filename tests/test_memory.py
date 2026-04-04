@@ -2,7 +2,9 @@
 
 import uuid
 
-from hebbmem import HebbMem, Config
+import pytest
+
+from hebbmem import Config, EncoderError, HebbMem, MemoryNotFoundError
 
 
 class TestStore:
@@ -13,7 +15,7 @@ class TestStore:
 
     def test_with_metadata(self):
         mem = HebbMem(encoder="hash")
-        mid = mem.store("hello", metadata={"source": "test"})
+        mem.store("hello", metadata={"source": "test"})
         results = mem.recall("hello", top_k=1)
         assert results[0].metadata == {"source": "test"}
 
@@ -52,17 +54,8 @@ class TestStep:
     def test_applies_decay(self):
         mem = HebbMem(encoder="hash")
         mem.store("test content")
-        # Recall to activate
-        results_before = mem.recall("test content", top_k=1)
-        act_before = results_before[0].activation
-
+        mem.recall("test content", top_k=1)
         mem.step(10)
-
-        results_after = mem.recall("test content", top_k=1)
-        act_after = results_after[0].activation
-        # After decay steps, the *residual* activation from the first recall
-        # should have decayed, but note recall re-activates.
-        # We just check step advances time.
         assert mem.stats()["time_step"] == 10
 
 
@@ -71,12 +64,13 @@ class TestForget:
         mem = HebbMem(encoder="hash")
         mid = mem.store("forget me")
         assert mem.stats()["node_count"] == 1
-        assert mem.forget(mid) is True
+        mem.forget(mid)
         assert mem.stats()["node_count"] == 0
 
     def test_nonexistent(self):
         mem = HebbMem(encoder="hash")
-        assert mem.forget(uuid.uuid4()) is False
+        with pytest.raises(MemoryNotFoundError):
+            mem.forget(uuid.uuid4())
 
 
 class TestStats:
@@ -112,8 +106,5 @@ class TestConfig:
         assert mem.stats()["encoder"] == "HashEncoder"
 
     def test_encoder_invalid_raises(self):
-        try:
+        with pytest.raises(EncoderError):
             HebbMem(encoder="nonexistent")
-            assert False, "Should have raised"
-        except ValueError:
-            pass
