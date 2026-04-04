@@ -4,6 +4,15 @@ All notable changes to hebbmem will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.0] - 2026-04-04
+
+### Added
+- Interactive D3.js visualization demo in `demo/`
+- FastAPI server exposing HebbMem graph state for visualization
+- Real-time animation of spreading activation, Hebbian reinforcement, and decay
+- Sample data loader for demo walkthrough
+- Dark theme with glowing node effects
+
 ## [0.3.0] - 2026-04-04
 
 ### Added

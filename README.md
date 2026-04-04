@@ -118,6 +118,18 @@ Key wins: **contradiction handling** (50% MRR improvement — newer memories ran
 
 Run yourself: `uv run python benchmarks/run_benchmark.py` — see [`benchmarks/`](benchmarks/README.md) for methodology.
 
+## Visualization
+
+Interactive D3.js demo showing spreading activation, Hebbian reinforcement, and decay in real-time. Dark theme with glowing nodes — neurons firing.
+
+```bash
+uv pip install fastapi uvicorn
+uv run python demo/server.py
+# Open http://localhost:8765
+```
+
+See [`demo/`](demo/README.md) for walkthrough.
+
 ## Examples
 
 See [`examples/`](examples/) for runnable scripts:
