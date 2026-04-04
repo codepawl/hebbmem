@@ -28,15 +28,16 @@ C = {
     "bg": "#0a0a1a",
     "bg_card": "#12122a",
     "text": "#e0e0f0",
-    "text_muted": "#6a6a8a",
+    "text2": "#9090b0",
+    "text_dim": "#6a6a8a",
     "gold": "#f0b429",
     "blue": "#4a9eff",
     "orange": "#ff6b35",
     "green": "#2dd4a0",
     "red": "#ff4757",
     "edge": "#2a2a4a",
-    "edge_active": "#f0b429",
-    "node_inactive": "#1a1a3a",
+    "edge_hi": "#f0b429",
+    "node_dim": "#1a1a3a",
 }
 
 plt.rcParams.update(
@@ -44,108 +45,144 @@ plt.rcParams.update(
         "font.family": "monospace",
         "text.color": C["text"],
         "axes.labelcolor": C["text"],
-        "xtick.color": C["text_muted"],
-        "ytick.color": C["text_muted"],
+        "xtick.color": C["text2"],
+        "ytick.color": C["text2"],
     }
 )
 
 
 def _save(fig: plt.Figure, path: Path) -> None:
-    fig.savefig(path, dpi=200, bbox_inches="tight", facecolor=fig.get_facecolor())
-    plt.close(fig)
-    print(f"  saved {path.relative_to(ASSETS.parent)}")
-
-
-def _draw_graph_on_ax(ax: plt.Axes, n_nodes: int = 8, seed: int = 42) -> None:
-    """Draw a small memory graph on an axes."""
-    rng = np.random.RandomState(seed)
-    graph = nx.watts_strogatz_graph(n_nodes, 3, 0.4, seed=seed)
-    pos = nx.spring_layout(graph, seed=seed, k=1.5)
-
-    activations = rng.uniform(0.1, 1.0, n_nodes)
-    node_colors = [
-        plt.cm.YlOrBr(a * 0.8 + 0.1)
-        for a in activations  # type: ignore[attr-defined]
-    ]
-    node_sizes = [200 + a * 400 for a in activations]
-
-    nx.draw_networkx_edges(
-        graph, pos, ax=ax, edge_color=C["edge"], width=1.5, alpha=0.5
+    fig.savefig(
+        path,
+        dpi=200,
+        bbox_inches="tight",
+        facecolor=fig.get_facecolor(),
+        pad_inches=0.3,
     )
-    nx.draw_networkx_nodes(
-        graph,
+    plt.close(fig)
+    print(f"  {path.relative_to(ASSETS.parent)}")
+
+
+def _trunc(s: str, n: int = 20) -> str:
+    return s[:n] + "..." if len(s) > n else s
+
+
+def _draw_graph(
+    ax: plt.Axes,
+    n: int = 8,
+    seed: int = 42,
+) -> None:
+    """Draw a memory graph with circular nodes."""
+    rng = np.random.RandomState(seed)
+    g = nx.watts_strogatz_graph(n, 3, 0.4, seed=seed)
+    pos = nx.spring_layout(g, seed=seed, k=1.8)
+    acts = rng.uniform(0.1, 1.0, n)
+    colors = [
+        plt.cm.YlOrBr(a * 0.8 + 0.1)  # type: ignore[attr-defined]
+        for a in acts
+    ]
+    sizes = [200 + a * 400 for a in acts]
+    nx.draw_networkx_edges(
+        g,
         pos,
         ax=ax,
-        node_color=node_colors,
-        node_size=node_sizes,
-        edgecolors=C["gold"],
-        linewidths=[a * 2 for a in activations],
+        edge_color=C["edge"],
+        width=1.5,
+        alpha=0.5,
     )
-    ax.set_xlim(-1.5, 1.5)
-    ax.set_ylim(-1.5, 1.5)
+    nx.draw_networkx_nodes(
+        g,
+        pos,
+        ax=ax,
+        node_color=colors,
+        node_size=sizes,
+        edgecolors=C["gold"],
+        linewidths=[a * 2 for a in acts],
+    )
+    ax.set_aspect("equal")
     ax.axis("off")
 
 
-# --- Asset generators ---
+# ── Hero Banner ──────────────────────────────────────────────
 
 
 def gen_hero_banner() -> None:
     fig = plt.figure(figsize=(12, 4), facecolor=C["bg"])
 
-    # Text side
-    ax_text = fig.add_axes([0.02, 0.05, 0.5, 0.9])
-    ax_text.set_facecolor(C["bg"])
-    ax_text.text(
+    ax_t = fig.add_axes([0.03, 0.05, 0.48, 0.9])
+    ax_t.set_facecolor(C["bg"])
+    ax_t.text(
         0.05,
         0.65,
         "hebbmem",
         fontsize=48,
         fontweight="bold",
         color=C["blue"],
-        transform=ax_text.transAxes,
+        transform=ax_t.transAxes,
     )
-    ax_text.text(
+    ax_t.text(
         0.05,
-        0.35,
+        0.30,
         "memories that fire together\nwire together",
-        fontsize=18,
-        color=C["text_muted"],
-        transform=ax_text.transAxes,
+        fontsize=20,
+        color=C["text2"],
+        transform=ax_t.transAxes,
         linespacing=1.5,
     )
-    ax_text.text(
+    ax_t.text(
         0.05,
-        0.10,
+        0.08,
         "pip install hebbmem",
-        fontsize=14,
+        fontsize=16,
         color=C["gold"],
-        transform=ax_text.transAxes,
+        transform=ax_t.transAxes,
         family="monospace",
     )
-    ax_text.axis("off")
+    ax_t.axis("off")
 
-    # Graph side
-    ax_graph = fig.add_axes([0.55, 0.05, 0.42, 0.9])
-    ax_graph.set_facecolor(C["bg"])
-    _draw_graph_on_ax(ax_graph, n_nodes=10, seed=42)
+    ax_g = fig.add_axes([0.55, 0.05, 0.42, 0.9])
+    ax_g.set_facecolor(C["bg"])
+    _draw_graph(ax_g, n=10, seed=42)
+    # glow on brightest node
+    ax_g.scatter(
+        [0],
+        [0],
+        s=1200,
+        c=C["gold"],
+        alpha=0.08,
+        zorder=0,
+        edgecolors="none",
+    )
 
     _save(fig, ASSETS / "readme" / "hero_banner.png")
 
 
+# ── How It Works (3 panels) ─────────────────────────────────
+
+
 def gen_how_it_works() -> None:
-    fig, axes = plt.subplots(1, 3, figsize=(12, 5), facecolor=C["bg"])
+    fig, axes = plt.subplots(
+        1,
+        3,
+        figsize=(16, 6),
+        facecolor=C["bg"],
+    )
+    fig.subplots_adjust(wspace=0.15)
 
     for ax in axes:
         ax.set_facecolor(C["bg"])
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.set_aspect("equal")
         ax.axis("off")
 
-    # Panel 1: Decay
+    # Panel 1 — Decay
     ax = axes[0]
     ax.text(
         0.5,
         0.92,
         "Decay",
-        fontsize=22,
+        fontsize=28,
         fontweight="bold",
         color=C["text"],
         ha="center",
@@ -155,46 +192,49 @@ def gen_how_it_works() -> None:
         0.5,
         0.82,
         "old memories fade",
-        fontsize=13,
-        color=C["text_muted"],
+        fontsize=18,
+        color=C["text2"],
         ha="center",
         transform=ax.transAxes,
     )
-    for i in range(6):
-        alpha = 1.0 - i * 0.17
-        color = plt.cm.YlOrBr(alpha * 0.8 + 0.1)  # type: ignore[attr-defined]
-        circle = plt.Circle(
-            (0.12 + i * 0.15, 0.45),
-            0.06,
-            color=color,
-            alpha=max(alpha, 0.15),
-            transform=ax.transAxes,
+    for i in range(7):
+        alpha = 1.0 - i * 0.14
+        col = plt.cm.YlOrBr(  # type: ignore[attr-defined]
+            alpha * 0.8 + 0.1,
         )
-        ax.add_patch(circle)
+        ax.add_patch(
+            plt.Circle(
+                (0.10 + i * 0.12, 0.50),
+                0.04,
+                color=col,
+                alpha=max(alpha, 0.12),
+                transform=ax.transAxes,
+            )
+        )
     ax.annotate(
         "",
-        xy=(0.85, 0.28),
-        xytext=(0.12, 0.28),
+        xy=(0.88, 0.35),
+        xytext=(0.10, 0.35),
         xycoords="axes fraction",
-        arrowprops=dict(arrowstyle="->", color=C["text_muted"], lw=1.5),
+        arrowprops=dict(arrowstyle="->", color=C["text2"], lw=1.5),
     )
     ax.text(
         0.5,
-        0.18,
-        "time →",
-        fontsize=11,
-        color=C["text_muted"],
+        0.25,
+        "time",
+        fontsize=16,
+        color=C["text2"],
         ha="center",
         transform=ax.transAxes,
     )
 
-    # Panel 2: Hebbian
+    # Panel 2 — Hebbian
     ax = axes[1]
     ax.text(
         0.5,
         0.92,
         "Hebbian",
-        fontsize=22,
+        fontsize=28,
         fontweight="bold",
         color=C["text"],
         ha="center",
@@ -204,74 +244,104 @@ def gen_how_it_works() -> None:
         0.5,
         0.82,
         "co-recalled memories bond",
-        fontsize=13,
-        color=C["text_muted"],
+        fontsize=18,
+        color=C["text2"],
         ha="center",
         transform=ax.transAxes,
     )
-    # Before
+    # before
     ax.add_patch(
-        plt.Circle((0.25, 0.55), 0.06, color=C["blue"], transform=ax.transAxes)
+        plt.Circle(
+            (0.18, 0.52),
+            0.05,
+            color=C["blue"],
+            transform=ax.transAxes,
+        )
     )
     ax.add_patch(
-        plt.Circle((0.45, 0.55), 0.06, color=C["blue"], transform=ax.transAxes)
+        plt.Circle(
+            (0.38, 0.52),
+            0.05,
+            color=C["blue"],
+            transform=ax.transAxes,
+        )
     )
-    ax.plot([0.31, 0.39], [0.55, 0.55], color=C["edge"], lw=1, transform=ax.transAxes)
+    ax.plot(
+        [0.23, 0.33],
+        [0.52, 0.52],
+        color=C["edge"],
+        lw=1,
+        transform=ax.transAxes,
+    )
     ax.text(
-        0.35,
+        0.28,
         0.40,
         "weak",
-        fontsize=10,
-        color=C["text_muted"],
+        fontsize=14,
+        color=C["text_dim"],
         ha="center",
         transform=ax.transAxes,
     )
-    # Arrow
+    # arrow
     ax.annotate(
         "",
-        xy=(0.62, 0.55),
-        xytext=(0.52, 0.55),
+        xy=(0.56, 0.52),
+        xytext=(0.46, 0.52),
         xycoords="axes fraction",
         arrowprops=dict(arrowstyle="->", color=C["gold"], lw=2),
     )
-    # After
+    # after
     ax.add_patch(
         plt.Circle(
-            (0.70, 0.55), 0.07, color=C["gold"], alpha=0.9, transform=ax.transAxes
+            (0.66, 0.52),
+            0.06,
+            color=C["gold"],
+            alpha=0.9,
+            transform=ax.transAxes,
         )
     )
     ax.add_patch(
         plt.Circle(
-            (0.90, 0.55), 0.07, color=C["gold"], alpha=0.9, transform=ax.transAxes
+            (0.86, 0.52),
+            0.06,
+            color=C["gold"],
+            alpha=0.9,
+            transform=ax.transAxes,
         )
     )
-    ax.plot([0.77, 0.83], [0.55, 0.55], color=C["gold"], lw=4, transform=ax.transAxes)
+    ax.plot(
+        [0.72, 0.80],
+        [0.52, 0.52],
+        color=C["gold"],
+        lw=4,
+        transform=ax.transAxes,
+    )
     ax.text(
-        0.80,
+        0.76,
         0.40,
         "strong",
-        fontsize=10,
+        fontsize=14,
         color=C["gold"],
         ha="center",
         transform=ax.transAxes,
     )
     ax.text(
         0.5,
-        0.18,
+        0.25,
         "recall together x5",
-        fontsize=11,
-        color=C["text_muted"],
+        fontsize=16,
+        color=C["text2"],
         ha="center",
         transform=ax.transAxes,
     )
 
-    # Panel 3: Spreading
+    # Panel 3 — Spreading
     ax = axes[2]
     ax.text(
         0.5,
         0.92,
         "Spreading",
-        fontsize=22,
+        fontsize=28,
         fontweight="bold",
         color=C["text"],
         ha="center",
@@ -281,22 +351,27 @@ def gen_how_it_works() -> None:
         0.5,
         0.82,
         "recall activates neighbors",
-        fontsize=13,
-        color=C["text_muted"],
+        fontsize=18,
+        color=C["text2"],
         ha="center",
         transform=ax.transAxes,
     )
-    center = (0.5, 0.48)
+    cx, cy = 0.5, 0.50
     ax.add_patch(
-        plt.Circle(center, 0.07, color=C["gold"], transform=ax.transAxes, zorder=5)
+        plt.Circle(
+            (cx, cy),
+            0.06,
+            color=C["gold"],
+            transform=ax.transAxes,
+            zorder=5,
+        )
     )
-    angles = np.linspace(0, 2 * np.pi, 5, endpoint=False)
-    for _i, a in enumerate(angles):
-        r1 = 0.18
-        pos1 = (center[0] + r1 * np.cos(a), center[1] + r1 * np.sin(a))
+    angles = np.linspace(0, 2 * np.pi, 6, endpoint=False)
+    for a in angles:
+        p1 = (cx + 0.16 * np.cos(a), cy + 0.16 * np.sin(a))
         ax.plot(
-            [center[0], pos1[0]],
-            [center[1], pos1[1]],
+            [cx, p1[0]],
+            [cy, p1[1]],
             color=C["orange"],
             lw=2,
             transform=ax.transAxes,
@@ -304,19 +379,19 @@ def gen_how_it_works() -> None:
         )
         ax.add_patch(
             plt.Circle(
-                pos1,
-                0.05,
+                p1,
+                0.04,
                 color=C["orange"],
                 alpha=0.7,
                 transform=ax.transAxes,
                 zorder=4,
             )
         )
-        r2 = 0.32
-        pos2 = (center[0] + r2 * np.cos(a + 0.3), center[1] + r2 * np.sin(a + 0.3))
+        p2x = cx + 0.28 * np.cos(a + 0.4)
+        p2y = cy + 0.28 * np.sin(a + 0.4)
         ax.plot(
-            [pos1[0], pos2[0]],
-            [pos1[1], pos2[1]],
+            [p1[0], p2x],
+            [p1[1], p2y],
             color=C["orange"],
             lw=1,
             transform=ax.transAxes,
@@ -324,8 +399,8 @@ def gen_how_it_works() -> None:
         )
         ax.add_patch(
             plt.Circle(
-                pos2,
-                0.035,
+                (p2x, p2y),
+                0.025,
                 color=C["orange"],
                 alpha=0.3,
                 transform=ax.transAxes,
@@ -334,24 +409,31 @@ def gen_how_it_works() -> None:
         )
     ax.text(
         0.5,
-        0.18,
+        0.25,
         "energy spreads per hop",
-        fontsize=11,
-        color=C["text_muted"],
+        fontsize=16,
+        color=C["text2"],
         ha="center",
         transform=ax.transAxes,
     )
 
-    fig.subplots_adjust(wspace=0.05)
     _save(fig, ASSETS / "readme" / "how_it_works.png")
 
 
+# ── Benchmark Results ────────────────────────────────────────
+
+
 def gen_benchmark_results() -> None:
-    scenarios = ["Associative", "Contradiction", "Noise", "Temporal"]
-    # Best metric per scenario from v0.3.0 benchmarks
-    hebbmem_vals = [0.56, 0.50, 0.60, 0.36]
-    baseline_vals = [0.44, 0.00, 0.56, 0.36]
-    metrics = ["Precision@5", "Precision@1", "Precision@5", "Precision@5"]
+    scenarios = [
+        "Associative",
+        "Contradiction",
+        "Noise",
+        "Temporal",
+    ]
+    hv = [0.56, 0.50, 0.60, 0.36]
+    bv = [0.44, 0.00, 0.56, 0.36]
+    met = ["P@5", "P@1", "P@5", "P@5"]
+    deltas = ["+27%", "unique", "+7%", "tied"]
 
     fig, ax = plt.subplots(figsize=(10, 6), facecolor=C["bg"])
     ax.set_facecolor(C["bg"])
@@ -359,280 +441,445 @@ def gen_benchmark_results() -> None:
     y = np.arange(len(scenarios))
     h = 0.35
 
-    ax.barh(y + h / 2, hebbmem_vals, h, label="hebbmem", color=C["green"], alpha=0.9)
-    ax.barh(y - h / 2, baseline_vals, h, label="Baseline", color=C["red"], alpha=0.5)
+    ax.barh(
+        y + h / 2,
+        hv,
+        h,
+        label="hebbmem",
+        color=C["green"],
+        alpha=0.9,
+    )
+    ax.barh(
+        y - h / 2,
+        bv,
+        h,
+        label="Baseline",
+        color=C["red"],
+        alpha=0.5,
+    )
 
-    # Delta labels
-    for i, (hv, bv) in enumerate(zip(hebbmem_vals, baseline_vals, strict=True)):
-        if bv > 0:
-            delta = (hv - bv) / bv * 100
-            label = f"+{delta:.0f}%" if delta > 0 else "tied"
-        elif hv > 0:
-            label = "unique"
-        else:
-            label = ""
+    # Value + delta labels
+    for i in range(len(scenarios)):
         ax.text(
-            hv + 0.02,
+            hv[i] + 0.02,
             y[i] + h / 2,
-            label,
+            f"{hv[i]:.2f}  {deltas[i]}",
             va="center",
-            fontsize=11,
+            fontsize=14,
             color=C["gold"],
             fontweight="bold",
         )
+        if bv[i] > 0:
+            ax.text(
+                bv[i] + 0.02,
+                y[i] - h / 2,
+                f"{bv[i]:.2f}",
+                va="center",
+                fontsize=12,
+                color=C["text_dim"],
+            )
 
     ax.set_yticks(y)
     ax.set_yticklabels(
-        [f"{s}\n({m})" for s, m in zip(scenarios, metrics, strict=True)], fontsize=12
+        [f"{s}\n({m})" for s, m in zip(scenarios, met, strict=True)],
+        fontsize=14,
     )
-    ax.set_xlabel("Score", fontsize=13)
-    ax.set_xlim(0, 0.85)
+    ax.set_xlabel("Score", fontsize=16)
+    ax.set_xlim(0, 0.90)
     ax.set_title(
-        "hebbmem vs Flat Vector Search", fontsize=20, fontweight="bold", pad=15
+        "hebbmem vs Flat Vector Search",
+        fontsize=24,
+        fontweight="bold",
+        pad=20,
+    )
+    ax.text(
+        0.5,
+        -0.08,
+        "Precision@K across 4 synthetic scenarios (HashEncoder)",
+        fontsize=14,
+        color=C["text2"],
+        ha="center",
+        transform=ax.transAxes,
     )
     ax.legend(
-        loc="lower right", fontsize=12, facecolor=C["bg_card"], edgecolor=C["edge"]
+        loc="lower right",
+        fontsize=14,
+        facecolor=C["bg_card"],
+        edgecolor=C["edge"],
     )
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["bottom"].set_color(C["edge"])
-    ax.spines["left"].set_color(C["edge"])
+    for s in ["top", "right"]:
+        ax.spines[s].set_visible(False)
+    for s in ["bottom", "left"]:
+        ax.spines[s].set_color(C["edge"])
     ax.grid(axis="x", color=C["edge"], alpha=0.3)
 
     _save(fig, ASSETS / "readme" / "benchmark_results.png")
 
 
-def gen_recall_pipeline() -> None:
-    fig, ax = plt.subplots(figsize=(10, 3), facecolor=C["bg"])
-    ax.set_facecolor(C["bg"])
-    ax.axis("off")
+# ── Recall Pipeline ──────────────────────────────────────────
 
+
+def gen_recall_pipeline() -> None:
     steps = [
-        ("Query", "input text", C["text_muted"]),
+        ("Query", "input text", C["text_dim"]),
         ("Encode", "embed query", C["blue"]),
-        ("Find Seeds", "cosine sim", C["blue"]),
+        ("Seeds", "cosine sim", C["blue"]),
         ("Spread", "BFS graph", C["gold"]),
         ("Hebbian", "strengthen", C["orange"]),
-        ("Rank", "score top-k", C["green"]),
+        ("Rank", "top-k", C["green"]),
     ]
+    n = len(steps)
+    bw = 1.4  # box width in data coords
+    gap = 0.5
+    total_w = n * bw + (n - 1) * gap
+    fig_w = total_w + 2  # padding
 
-    x_start = 0.03
-    box_w = 0.13
-    gap = 0.025
-
-    for i, (title, subtitle, color) in enumerate(steps):
-        x = x_start + i * (box_w + gap)
-        rect = mpatches.FancyBboxPatch(
-            (x, 0.35),
-            box_w,
-            0.4,
-            boxstyle="round,pad=0.02",
-            facecolor=color if i == 3 else C["bg_card"],
-            edgecolor=color,
-            linewidth=2,
-            alpha=0.9 if i == 3 else 0.7,
-            transform=ax.transAxes,
-        )
-        ax.add_patch(rect)
-        ax.text(
-            x + box_w / 2,
-            0.62,
-            title,
-            ha="center",
-            va="center",
-            fontsize=12,
-            fontweight="bold",
-            color=C["bg"] if i == 3 else C["text"],
-            transform=ax.transAxes,
-        )
-        ax.text(
-            x + box_w / 2,
-            0.45,
-            subtitle,
-            ha="center",
-            va="center",
-            fontsize=9,
-            color=C["bg"] if i == 3 else C["text_muted"],
-            transform=ax.transAxes,
-        )
-
-        if i < len(steps) - 1:
-            ax.annotate(
-                "",
-                xy=(x + box_w + gap * 0.8, 0.55),
-                xytext=(x + box_w + gap * 0.2, 0.55),
-                xycoords="axes fraction",
-                arrowprops=dict(arrowstyle="->", color=C["text_muted"], lw=1.5),
-            )
+    fig, ax = plt.subplots(
+        figsize=(fig_w * 1.3, 3.5),
+        facecolor=C["bg"],
+    )
+    ax.set_facecolor(C["bg"])
+    ax.set_xlim(-0.5, total_w + 0.5)
+    ax.set_ylim(-0.5, 2.5)
+    ax.set_aspect("equal")
+    ax.axis("off")
 
     ax.text(
-        0.5,
-        0.92,
+        total_w / 2,
+        2.2,
         "Recall Pipeline",
-        fontsize=16,
+        fontsize=24,
         fontweight="bold",
         color=C["text"],
         ha="center",
-        transform=ax.transAxes,
     )
+
+    for i, (title, sub, col) in enumerate(steps):
+        x = i * (bw + gap)
+        is_spread = i == 3
+        fc = col if is_spread else C["bg_card"]
+        tc = C["bg"] if is_spread else C["text"]
+        sc = C["bg"] if is_spread else C["text2"]
+
+        rect = mpatches.FancyBboxPatch(
+            (x, 0.2),
+            bw,
+            1.2,
+            boxstyle="round,pad=0.15",
+            facecolor=fc,
+            edgecolor=col,
+            linewidth=2.5,
+            alpha=0.95 if is_spread else 0.75,
+        )
+        ax.add_patch(rect)
+        ax.text(
+            x + bw / 2,
+            1.0,
+            title,
+            fontsize=16,
+            fontweight="bold",
+            color=tc,
+            ha="center",
+            va="center",
+        )
+        ax.text(
+            x + bw / 2,
+            0.55,
+            sub,
+            fontsize=12,
+            color=sc,
+            ha="center",
+            va="center",
+        )
+
+        if i < n - 1:
+            ax.annotate(
+                "",
+                xy=(x + bw + gap * 0.7, 0.8),
+                xytext=(x + bw + gap * 0.1, 0.8),
+                arrowprops=dict(
+                    arrowstyle="->",
+                    color=C["text2"],
+                    lw=2,
+                ),
+            )
 
     _save(fig, ASSETS / "readme" / "recall_pipeline.png")
 
 
+# ── Graph Example ────────────────────────────────────────────
+
+
 def gen_graph_example() -> None:
-    mem = HebbMem(encoder="hash")
-    memories = [
-        ("Project Atlas deadline March 15", 0.9),
-        ("Atlas uses collaborative filtering", 0.7),
+    from hebbmem import Config
+
+    mem = HebbMem(
+        encoder="hash",
+        config=Config(auto_connect_threshold=0.25),
+    )
+    mems = [
+        ("Atlas deadline March 15", 0.9),
+        ("Atlas collaborative filtering", 0.7),
         ("Team meeting every Tuesday", 0.6),
         ("User loves Vietnamese coffee", 0.7),
-        ("User is studying Rust language", 0.6),
-        ("Rust async runtime article saved", 0.4),
-        ("Rewrite Python CLI tool in Rust", 0.7),
+        ("User studying Rust", 0.6),
+        ("Rust async runtime saved", 0.4),
+        ("Rewrite CLI tool in Rust", 0.7),
         ("Weather is nice today", 0.1),
         ("User said good morning", 0.05),
-        ("Budget review end of quarter", 0.8),
+        ("Budget review end of Q", 0.8),
     ]
-    for content, imp in memories:
+    for content, imp in mems:
         mem.store(content, importance=imp)
 
-    for _ in range(3):
+    for _ in range(4):
         mem.recall("Atlas project deadline")
-    for _ in range(3):
+    for _ in range(4):
         mem.recall("Rust programming language")
     mem.step(5)
 
-    # Build networkx graph
-    graph = nx.Graph()
-    node_data = {}
+    # Build nx graph
+    g = nx.Graph()
+    ndata: dict[str, dict] = {}
     for nid, node in mem._graph._nodes.items():
         sid = str(nid)[:8]
-        graph.add_node(sid)
-        node_data[sid] = {
-            "label": node.content[:28],
-            "activation": node.activation,
-            "strength": node.base_strength,
-            "importance": node.importance,
+        g.add_node(sid)
+        ndata[sid] = {
+            "label": _trunc(node.content, 20),
+            "act": node.activation,
+            "str": node.base_strength,
+            "imp": node.importance,
         }
 
-    seen = set()
+    seen: set[tuple[str, str]] = set()
     for (src, tgt), edge in mem._graph._edges.items():
-        key = tuple(sorted([str(src)[:8], str(tgt)[:8]]))
-        if key not in seen and key[0] != key[1]:
+        a, b = str(src)[:8], str(tgt)[:8]
+        key = (min(a, b), max(a, b))
+        if key not in seen and a != b:
             seen.add(key)
-            graph.add_edge(key[0], key[1], weight=edge.weight)
+            g.add_edge(a, b, weight=edge.weight)
 
-    fig, ax = plt.subplots(figsize=(8, 8), facecolor=C["bg"])
+    fig, ax = plt.subplots(figsize=(9, 9), facecolor=C["bg"])
     ax.set_facecolor(C["bg"])
+    ax.set_aspect("equal")
     ax.axis("off")
 
-    pos = nx.spring_layout(graph, seed=42, k=2.0)
+    pos = nx.spring_layout(g, seed=42, k=2.5, iterations=80)
 
     # Edges
-    for u, v, d in graph.edges(data=True):
+    for u, v, d in g.edges(data=True):
         w = d.get("weight", 0.1)
-        color = C["edge_active"] if w > 0.3 else C["edge"]
+        col = C["edge_hi"] if w > 0.3 else C["edge"]
         ax.plot(
             [pos[u][0], pos[v][0]],
             [pos[u][1], pos[v][1]],
-            color=color,
-            lw=1 + w * 5,
+            color=col,
+            lw=0.5 + w * 3,
             alpha=0.3 + w * 0.5,
             zorder=1,
         )
 
-    # Nodes
-    for node_id in graph.nodes():
-        d = node_data[node_id]
-        act = d["activation"]
-        strength = d["strength"]
-        imp = d["importance"]
-        color = plt.cm.YlOrBr(max(act * 2, 0.15))  # type: ignore[attr-defined]
-        size = 8 + strength * 12 + imp * 5
+    # Nodes + labels
+    for nid in g.nodes():
+        d = ndata[nid]
+        act = d["act"]
+        col = plt.cm.YlOrBr(  # type: ignore[attr-defined]
+            max(act * 2, 0.15),
+        )
+        sz = 8 + d["str"] * 12 + d["imp"] * 5
+        ec = C["gold"] if act > 0.1 else C["edge"]
         ax.scatter(
-            pos[node_id][0],
-            pos[node_id][1],
-            s=size * 40,
-            c=[color],
-            edgecolors=C["gold"] if act > 0.1 else C["edge"],
-            linewidths=1 + imp * 2,
+            pos[nid][0],
+            pos[nid][1],
+            s=sz * 50,
+            c=[col],
+            edgecolors=ec,
+            linewidths=1 + d["imp"] * 2,
             zorder=3,
         )
         ax.text(
-            pos[node_id][0],
-            pos[node_id][1] - 0.12,
+            pos[nid][0],
+            pos[nid][1] - 0.14,
             d["label"],
-            fontsize=7,
+            fontsize=11,
             ha="center",
-            color=C["text_muted"],
+            color=C["text2"],
             zorder=4,
         )
 
     ax.set_title(
-        "Memory Graph Example", fontsize=18, fontweight="bold", color=C["text"], pad=15
+        "Memory Graph Example",
+        fontsize=22,
+        fontweight="bold",
+        color=C["text"],
+        pad=15,
     )
     _save(fig, ASSETS / "readme" / "graph_example.png")
+
+
+# ── OG Image ─────────────────────────────────────────────────
 
 
 def gen_og_image() -> None:
     fig = plt.figure(figsize=(12, 6.3), facecolor=C["bg"])
 
-    ax_text = fig.add_axes([0.03, 0.05, 0.55, 0.9])
-    ax_text.set_facecolor(C["bg"])
-    ax_text.text(
+    ax_t = fig.add_axes([0.04, 0.08, 0.52, 0.84])
+    ax_t.set_facecolor(C["bg"])
+    ax_t.text(
         0.05,
-        0.7,
+        0.70,
         "hebbmem",
         fontsize=44,
         fontweight="bold",
         color=C["blue"],
-        transform=ax_text.transAxes,
+        transform=ax_t.transAxes,
     )
-    ax_text.text(
+    ax_t.text(
         0.05,
-        0.50,
+        0.48,
         "Hebbian memory\nfor AI agents",
         fontsize=22,
         color=C["text"],
-        transform=ax_text.transAxes,
+        transform=ax_t.transAxes,
         linespacing=1.4,
     )
-    ax_text.text(
+    ax_t.text(
         0.05,
         0.25,
         "pip install hebbmem",
-        fontsize=16,
+        fontsize=18,
         color=C["gold"],
-        transform=ax_text.transAxes,
+        transform=ax_t.transAxes,
         family="monospace",
     )
-    ax_text.text(
-        0.05,
-        0.08,
-        "github.com/codepawl/hebbmem",
-        fontsize=12,
-        color=C["text_muted"],
-        transform=ax_text.transAxes,
+    # divider
+    ax_t.plot(
+        [0.05, 0.90],
+        [0.18, 0.18],
+        color=C["gold"],
+        lw=0.5,
+        alpha=0.5,
+        transform=ax_t.transAxes,
     )
-    ax_text.axis("off")
+    ax_t.text(
+        0.05,
+        0.06,
+        "github.com/codepawl/hebbmem",
+        fontsize=14,
+        color=C["text2"],
+        transform=ax_t.transAxes,
+    )
+    ax_t.axis("off")
 
-    ax_graph = fig.add_axes([0.58, 0.1, 0.38, 0.8])
-    ax_graph.set_facecolor(C["bg"])
-    _draw_graph_on_ax(ax_graph, n_nodes=10, seed=77)
+    ax_g = fig.add_axes([0.58, 0.1, 0.38, 0.8])
+    ax_g.set_facecolor(C["bg"])
+    _draw_graph(ax_g, n=10, seed=77)
 
     _save(fig, ASSETS / "social" / "og_image.png")
 
 
-def _gen_x_image(filename: str, title: str, subtitle: str, draw_fn=None) -> None:
-    fig = plt.figure(figsize=(16, 9), facecolor=C["bg"])
-    ax = fig.add_axes([0.05, 0.05, 0.9, 0.9])
+# ── X Thread Images ──────────────────────────────────────────
+
+
+def gen_x_thread_1() -> None:
+    fig, ax = plt.subplots(figsize=(16, 9), facecolor=C["bg"])
     ax.set_facecolor(C["bg"])
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_aspect("equal")
     ax.axis("off")
 
     ax.text(
         0.5,
-        0.75,
-        title,
+        0.78,
+        "What if AI memory\nworked like your brain?",
+        fontsize=40,
+        fontweight="bold",
+        color=C["text"],
+        ha="center",
+        transform=ax.transAxes,
+        linespacing=1.3,
+    )
+
+    # Three visual icons: graph cluster, code, agent
+    icons = [
+        (0.25, "brain", C["gold"]),
+        (0.50, "{ code }", C["blue"]),
+        (0.75, "agent", C["green"]),
+    ]
+    for x, label, col in icons:
+        ax.add_patch(
+            plt.Circle(
+                (x, 0.42),
+                0.06,
+                color=col,
+                alpha=0.2,
+                transform=ax.transAxes,
+                zorder=3,
+            )
+        )
+        ax.text(
+            x,
+            0.42,
+            label,
+            fontsize=18,
+            ha="center",
+            va="center",
+            color=col,
+            fontweight="bold",
+            transform=ax.transAxes,
+        )
+
+    # Arrows
+    for x in [0.35, 0.60]:
+        ax.annotate(
+            "",
+            xy=(x + 0.06, 0.42),
+            xytext=(x, 0.42),
+            xycoords="axes fraction",
+            arrowprops=dict(
+                arrowstyle="->",
+                color=C["gold"],
+                lw=3,
+            ),
+        )
+
+    ax.text(
+        0.5,
+        0.20,
+        "pip install hebbmem",
+        fontsize=24,
+        color=C["gold"],
+        ha="center",
+        transform=ax.transAxes,
+        family="monospace",
+    )
+    ax.text(
+        0.95,
+        0.05,
+        "hebbmem",
+        fontsize=16,
+        color=C["blue"],
+        ha="right",
+        transform=ax.transAxes,
+        alpha=0.5,
+    )
+
+    _save(fig, ASSETS / "social" / "x_thread_1.png")
+
+
+def gen_x_thread_2() -> None:
+    fig, ax = plt.subplots(figsize=(16, 9), facecolor=C["bg"])
+    ax.set_facecolor(C["bg"])
+    ax.set_xlim(0, 1)
+    ax.set_ylim(0, 1)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+    ax.text(
+        0.5,
+        0.88,
+        "Spreading Activation",
         fontsize=36,
         fontweight="bold",
         color=C["text"],
@@ -641,155 +888,180 @@ def _gen_x_image(filename: str, title: str, subtitle: str, draw_fn=None) -> None
     )
     ax.text(
         0.5,
-        0.60,
-        subtitle,
+        0.80,
+        'Query "Project Atlas" activates related memories',
         fontsize=18,
-        color=C["text_muted"],
+        color=C["text2"],
         ha="center",
         transform=ax.transAxes,
     )
 
-    if draw_fn:
-        draw_fn(ax)
+    cx, cy = 0.5, 0.45
+    # Seed node
+    ax.add_patch(
+        plt.Circle(
+            (cx, cy),
+            0.05,
+            color=C["gold"],
+            transform=ax.transAxes,
+            zorder=5,
+        )
+    )
+    ax.text(
+        cx,
+        cy - 0.08,
+        "Project Atlas",
+        fontsize=14,
+        color=C["gold"],
+        ha="center",
+        fontweight="bold",
+        transform=ax.transAxes,
+    )
+
+    # Hop 1 nodes with labels
+    hop1 = [
+        (0.18, "Atlas deadline", 0.8),
+        (0.50, "Team meeting", 0.7),
+        (0.82, "Atlas filtering", 0.7),
+    ]
+    angles_h1 = np.linspace(
+        np.pi * 0.2,
+        np.pi * 0.8,
+        len(hop1),
+    )
+    for angle, (_, label, _alpha) in zip(
+        angles_h1,
+        hop1,
+        strict=True,
+    ):
+        r = 0.18
+        px = cx + r * np.cos(angle)
+        py = cy + r * np.sin(angle)
+        ax.plot(
+            [cx, px],
+            [cy, py],
+            color=C["orange"],
+            lw=2.5,
+            transform=ax.transAxes,
+            alpha=0.7,
+        )
+        ax.add_patch(
+            plt.Circle(
+                (px, py),
+                0.035,
+                color=C["orange"],
+                alpha=0.7,
+                transform=ax.transAxes,
+                zorder=4,
+            )
+        )
+        ax.text(
+            px,
+            py - 0.06,
+            label,
+            fontsize=11,
+            color=C["text"],
+            ha="center",
+            transform=ax.transAxes,
+        )
+
+    # Hop 2 dimmer
+    hop2_labels = ["Budget review", "Q2 planning"]
+    angles_h2 = [np.pi * 0.35, np.pi * 0.65]
+    for angle, label in zip(angles_h2, hop2_labels, strict=True):
+        r2 = 0.32
+        px = cx + r2 * np.cos(angle)
+        py = cy + r2 * np.sin(angle)
+        # connect to nearest hop1
+        r1 = 0.18
+        p1x = cx + r1 * np.cos(angle)
+        p1y = cy + r1 * np.sin(angle)
+        ax.plot(
+            [p1x, px],
+            [p1y, py],
+            color=C["orange"],
+            lw=1,
+            transform=ax.transAxes,
+            alpha=0.3,
+        )
+        ax.add_patch(
+            plt.Circle(
+                (px, py),
+                0.025,
+                color=C["orange"],
+                alpha=0.3,
+                transform=ax.transAxes,
+                zorder=3,
+            )
+        )
+        ax.text(
+            px,
+            py - 0.05,
+            label,
+            fontsize=10,
+            color=C["text_dim"],
+            ha="center",
+            transform=ax.transAxes,
+        )
 
     ax.text(
         0.95,
         0.05,
         "hebbmem",
-        fontsize=14,
+        fontsize=16,
         color=C["blue"],
         ha="right",
         transform=ax.transAxes,
-        alpha=0.6,
+        alpha=0.5,
     )
-    _save(fig, ASSETS / "social" / filename)
-
-
-def gen_x_thread_1() -> None:
-    def draw(ax: plt.Axes) -> None:
-        icons = [
-            ("brain", 0.25),
-            ("->", 0.40),
-            ("code", 0.55),
-            ("->", 0.70),
-            ("agent", 0.85),
-        ]
-        for text, x in icons:
-            color = C["gold"] if text not in ("->",) else C["text_muted"]
-            ax.text(
-                x,
-                0.38,
-                text,
-                fontsize=22,
-                ha="center",
-                color=color,
-                transform=ax.transAxes,
-            )
-
-    _gen_x_image(
-        "x_thread_1.png",
-        "What if AI memory worked\nlike your brain?",
-        "pip install hebbmem",
-        draw,
-    )
-
-
-def gen_x_thread_2() -> None:
-    def draw(ax: plt.Axes) -> None:
-        center = (0.5, 0.32)
-        ax.add_patch(
-            plt.Circle(center, 0.04, color=C["gold"], transform=ax.transAxes, zorder=5)
-        )
-        ax.text(
-            center[0],
-            center[1] - 0.07,
-            "seed",
-            fontsize=10,
-            color=C["gold"],
-            ha="center",
-            transform=ax.transAxes,
-        )
-        angles = np.linspace(0, 2 * np.pi, 6, endpoint=False)
-        for a in angles:
-            p1 = (center[0] + 0.12 * np.cos(a), center[1] + 0.08 * np.sin(a))
-            ax.plot(
-                [center[0], p1[0]],
-                [center[1], p1[1]],
-                color=C["orange"],
-                lw=2.5,
-                transform=ax.transAxes,
-                alpha=0.7,
-            )
-            ax.add_patch(
-                plt.Circle(
-                    p1,
-                    0.03,
-                    color=C["orange"],
-                    alpha=0.7,
-                    transform=ax.transAxes,
-                    zorder=4,
-                )
-            )
-            p2 = (
-                center[0] + 0.22 * np.cos(a + 0.4),
-                center[1] + 0.15 * np.sin(a + 0.4),
-            )
-            ax.plot(
-                [p1[0], p2[0]],
-                [p1[1], p2[1]],
-                color=C["orange"],
-                lw=1,
-                transform=ax.transAxes,
-                alpha=0.3,
-            )
-            ax.add_patch(
-                plt.Circle(
-                    p2,
-                    0.02,
-                    color=C["orange"],
-                    alpha=0.3,
-                    transform=ax.transAxes,
-                    zorder=3,
-                )
-            )
-
-    _gen_x_image(
-        "x_thread_2.png",
-        "Spreading Activation",
-        'Query "Project Atlas" → activates related memories',
-        draw,
-    )
+    _save(fig, ASSETS / "social" / "x_thread_2.png")
 
 
 def gen_x_thread_3() -> None:
-    """Benchmark comparison for X thread."""
     fig = plt.figure(figsize=(16, 9), facecolor=C["bg"])
-    ax = fig.add_axes([0.12, 0.15, 0.78, 0.65])
+    ax = fig.add_axes([0.12, 0.15, 0.78, 0.62])
     ax.set_facecolor(C["bg"])
 
     scenarios = ["Associative", "Contradiction", "Noise", "Temporal"]
-    h_vals = [0.56, 0.50, 0.60, 0.36]
-    b_vals = [0.44, 0.00, 0.56, 0.36]
+    hv = [0.56, 0.50, 0.60, 0.36]
+    bvals = [0.44, 0.00, 0.56, 0.36]
 
     x = np.arange(len(scenarios))
     w = 0.35
-    ax.bar(x - w / 2, h_vals, w, label="hebbmem", color=C["green"], alpha=0.9)
-    ax.bar(x + w / 2, b_vals, w, label="Baseline", color=C["red"], alpha=0.5)
-
+    ax.bar(
+        x - w / 2,
+        hv,
+        w,
+        label="hebbmem",
+        color=C["green"],
+        alpha=0.9,
+    )
+    ax.bar(
+        x + w / 2,
+        bvals,
+        w,
+        label="Baseline",
+        color=C["red"],
+        alpha=0.5,
+    )
     ax.set_xticks(x)
-    ax.set_xticklabels(scenarios, fontsize=14)
-    ax.set_ylabel("Precision", fontsize=14)
-    ax.legend(fontsize=13, facecolor=C["bg_card"], edgecolor=C["edge"])
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["bottom"].set_color(C["edge"])
-    ax.spines["left"].set_color(C["edge"])
+    ax.set_xticklabels(scenarios, fontsize=16)
+    ax.set_ylabel("Precision", fontsize=16)
+    ax.legend(
+        fontsize=14,
+        facecolor=C["bg_card"],
+        edgecolor=C["edge"],
+    )
+    for s in ["top", "right"]:
+        ax.spines[s].set_visible(False)
+    for s in ["bottom", "left"]:
+        ax.spines[s].set_color(C["edge"])
 
     fig.text(
         0.5,
-        0.88,
+        0.86,
         "hebbmem vs Flat Vector Search",
-        fontsize=28,
+        fontsize=32,
         fontweight="bold",
         color=C["text"],
         ha="center",
@@ -798,54 +1070,67 @@ def gen_x_thread_3() -> None:
         0.5,
         0.06,
         "pip install hebbmem",
-        fontsize=16,
+        fontsize=20,
         color=C["gold"],
         ha="center",
         family="monospace",
     )
-    fig.text(0.95, 0.03, "hebbmem", fontsize=12, color=C["blue"], ha="right", alpha=0.6)
-
+    fig.text(
+        0.95,
+        0.03,
+        "hebbmem",
+        fontsize=14,
+        color=C["blue"],
+        ha="right",
+        alpha=0.5,
+    )
     _save(fig, ASSETS / "social" / "x_thread_3.png")
+
+
+# ── Dev.to Cover ─────────────────────────────────────────────
 
 
 def gen_devto_cover() -> None:
     fig = plt.figure(figsize=(10, 4.2), facecolor=C["bg"])
 
-    ax_text = fig.add_axes([0.03, 0.05, 0.55, 0.9])
-    ax_text.set_facecolor(C["bg"])
-    ax_text.text(
+    ax_t = fig.add_axes([0.04, 0.08, 0.50, 0.84])
+    ax_t.set_facecolor(C["bg"])
+    ax_t.text(
         0.05,
         0.65,
         "hebbmem",
         fontsize=38,
         fontweight="bold",
         color=C["blue"],
-        transform=ax_text.transAxes,
+        transform=ax_t.transAxes,
     )
-    ax_text.text(
+    ax_t.text(
         0.05,
         0.40,
         "Hebbian memory for AI agents",
-        fontsize=16,
+        fontsize=18,
         color=C["text"],
-        transform=ax_text.transAxes,
+        transform=ax_t.transAxes,
     )
-    ax_text.text(
+    ax_t.text(
         0.05,
         0.15,
         "pip install hebbmem",
-        fontsize=14,
+        fontsize=16,
         color=C["gold"],
-        transform=ax_text.transAxes,
+        transform=ax_t.transAxes,
         family="monospace",
     )
-    ax_text.axis("off")
+    ax_t.axis("off")
 
-    ax_graph = fig.add_axes([0.58, 0.05, 0.38, 0.9])
-    ax_graph.set_facecolor(C["bg"])
-    _draw_graph_on_ax(ax_graph, n_nodes=8, seed=99)
+    ax_g = fig.add_axes([0.60, 0.08, 0.36, 0.84])
+    ax_g.set_facecolor(C["bg"])
+    _draw_graph(ax_g, n=8, seed=99)
 
     _save(fig, ASSETS / "social" / "devto_cover.png")
+
+
+# ── Architecture ─────────────────────────────────────────────
 
 
 def gen_architecture() -> None:
@@ -854,100 +1139,112 @@ def gen_architecture() -> None:
     ax.axis("off")
 
     boxes = [
-        # (x, y, w, h, label, sublabel, color)
         (
             0.1,
             0.78,
             0.8,
-            0.15,
+            0.14,
             "HebbMem (API)",
             "store / recall / step / save / load",
             C["blue"],
         ),
-        (0.1, 0.55, 0.25, 0.18, "Encoder", "hash / sentence-\ntransformer", C["green"]),
-        (0.38, 0.55, 0.25, 0.18, "MemoryGraph", "spread / hebbian\n/ decay", C["gold"]),
-        (0.66, 0.55, 0.24, 0.18, "Persistence", "SQLite .hebb", C["orange"]),
+        (0.1, 0.56, 0.24, 0.16, "Encoder", "hash / sentence-\ntransformer", C["green"]),
+        (0.38, 0.56, 0.24, 0.16, "MemoryGraph", "spread / hebbian\n/ decay", C["gold"]),
+        (0.66, 0.56, 0.24, 0.16, "Persistence", "SQLite .hebb", C["orange"]),
         (
             0.1,
-            0.28,
+            0.32,
             0.8,
-            0.2,
+            0.16,
             "MemoryNode",
-            "content | embedding | activation | strength | importance",
-            C["text_muted"],
+            "content | embedding | activation\nstrength | importance | metadata",
+            C["text2"],
         ),
     ]
 
-    for x, y, w, h, label, sublabel, color in boxes:
+    for x, y, w, h, label, sub, col in boxes:
         rect = mpatches.FancyBboxPatch(
             (x, y),
             w,
             h,
             boxstyle="round,pad=0.015",
             facecolor=C["bg_card"],
-            edgecolor=color,
+            edgecolor=col,
             linewidth=2,
             transform=ax.transAxes,
         )
         ax.add_patch(rect)
         ax.text(
             x + w / 2,
-            y + h * 0.7,
+            y + h * 0.68,
             label,
-            fontsize=13,
+            fontsize=14,
             fontweight="bold",
-            color=color,
+            color=col,
             ha="center",
             transform=ax.transAxes,
         )
         ax.text(
             x + w / 2,
             y + h * 0.25,
-            sublabel,
-            fontsize=9,
-            color=C["text_muted"],
+            sub,
+            fontsize=10,
+            color=C["text2"],
             ha="center",
             va="center",
             transform=ax.transAxes,
         )
 
     # Arrows
-    for src_x in [0.22, 0.50, 0.78]:
+    for sx in [0.22, 0.50, 0.78]:
         ax.annotate(
             "",
-            xy=(src_x, 0.73),
-            xytext=(src_x, 0.78),
+            xy=(sx, 0.72),
+            xytext=(sx, 0.78),
             xycoords="axes fraction",
-            arrowprops=dict(arrowstyle="->", color=C["text_muted"], lw=1.2),
+            arrowprops=dict(arrowstyle="->", color=C["text2"], lw=1.2),
         )
     ax.annotate(
         "",
         xy=(0.5, 0.48),
-        xytext=(0.5, 0.55),
+        xytext=(0.5, 0.56),
         xycoords="axes fraction",
-        arrowprops=dict(arrowstyle="->", color=C["text_muted"], lw=1.2),
+        arrowprops=dict(arrowstyle="->", color=C["text2"], lw=1.2),
     )
 
     ax.set_title(
-        "Architecture", fontsize=20, fontweight="bold", color=C["text"], pad=15
+        "Architecture",
+        fontsize=22,
+        fontweight="bold",
+        color=C["text"],
+        pad=15,
     )
     _save(fig, ASSETS / "diagrams" / "architecture.png")
 
 
+# ── Comparison ───────────────────────────────────────────────
+
+
 def gen_comparison() -> None:
-    fig, (ax_l, ax_r) = plt.subplots(1, 2, figsize=(12, 6), facecolor=C["bg"])
+    fig, (ax_l, ax_r) = plt.subplots(
+        1,
+        2,
+        figsize=(12, 6),
+        facecolor=C["bg"],
+    )
 
     for ax in (ax_l, ax_r):
         ax.set_facecolor(C["bg"])
+        ax.set_aspect("equal")
         ax.axis("off")
 
-    # Left: flat vector search (grayscale)
+    # Left: flat vector search
     ax_l.set_title(
         "Flat Vector Search",
-        fontsize=18,
+        fontsize=20,
         fontweight="bold",
-        color=C["text_muted"],
-        pad=10,
+        color=C["text2"],
+        pad=12,
     )
     rng = np.random.RandomState(42)
     pts = rng.randn(12, 2) * 0.3
@@ -955,74 +1252,124 @@ def gen_comparison() -> None:
     ax_l.scatter(
         pts[:, 0],
         pts[:, 1],
-        s=150,
+        s=180,
         c="#3a3a5a",
-        edgecolors="#4a4a6a",
+        edgecolors="#5a5a7a",
         linewidths=1.5,
         zorder=3,
     )
-    ax_l.scatter([query[0]], [query[1]], s=200, c="#6a6a8a", marker="*", zorder=5)
+    ax_l.scatter(
+        [query[0]],
+        [query[1]],
+        s=300,
+        c="#8a8aaa",
+        marker="*",
+        zorder=5,
+    )
+    ax_l.text(
+        query[0] + 0.08,
+        query[1] + 0.08,
+        "query",
+        fontsize=12,
+        color=C["text2"],
+    )
     dists = np.linalg.norm(pts - query, axis=1)
     top3 = np.argsort(dists)[:3]
     for i in top3:
         ax_l.plot(
             [query[0], pts[i, 0]],
             [query[1], pts[i, 1]],
-            color="#5a5a7a",
-            lw=1.5,
+            color="#6a6a8a",
+            lw=2,
             ls="--",
         )
-    labels = ["no decay", "no association", "cosine only"]
-    for i, lab in enumerate(labels):
+    labels_l = ["no decay", "no association", "cosine only"]
+    for i, lab in enumerate(labels_l):
         ax_l.text(
             0.5,
-            0.08 - i * 0.06,
+            0.06 - i * 0.06,
             lab,
             ha="center",
-            fontsize=11,
-            color=C["text_muted"],
+            fontsize=14,
+            color=C["text_dim"],
             transform=ax_l.transAxes,
         )
 
-    # Right: hebbmem (vibrant)
-    ax_r.set_title("hebbmem", fontsize=18, fontweight="bold", color=C["blue"], pad=10)
-    graph = nx.watts_strogatz_graph(12, 3, 0.4, seed=42)
-    pos = nx.spring_layout(graph, seed=42)
-    activations = rng.uniform(0.2, 1.0, 12)
-    colors = [plt.cm.YlOrBr(a * 0.8 + 0.1) for a in activations]  # type: ignore[attr-defined]
+    # Divider
+    fig.patches.append(
+        mpatches.FancyBboxPatch(
+            (0.498, 0.1),
+            0.004,
+            0.8,
+            transform=fig.transFigure,
+            facecolor=C["edge"],
+            edgecolor="none",
+        )
+    )
+
+    # Right: hebbmem
+    ax_r.set_title(
+        "hebbmem",
+        fontsize=20,
+        fontweight="bold",
+        color=C["blue"],
+        pad=12,
+    )
+    g = nx.watts_strogatz_graph(12, 3, 0.4, seed=42)
+    pos = nx.spring_layout(g, seed=42)
+    acts = rng.uniform(0.2, 1.0, 12)
+    colors = [
+        plt.cm.YlOrBr(a * 0.8 + 0.1)  # type: ignore[attr-defined]
+        for a in acts
+    ]
     nx.draw_networkx_edges(
-        graph, pos, ax=ax_r, edge_color=C["edge"], width=1.5, alpha=0.4
+        g,
+        pos,
+        ax=ax_r,
+        edge_color=C["edge"],
+        width=1.5,
+        alpha=0.4,
     )
     nx.draw_networkx_nodes(
-        graph,
+        g,
         pos,
         ax=ax_r,
         node_color=colors,
-        node_size=[200 + a * 300 for a in activations],
+        node_size=[200 + a * 300 for a in acts],
         edgecolors=C["gold"],
-        linewidths=[a * 2 for a in activations],
+        linewidths=[a * 2 for a in acts],
     )
-    labels_r = ["memories decay", "co-recall bonds", "activation spreads"]
+    labels_r = [
+        "memories decay",
+        "co-recall bonds",
+        "activation spreads",
+    ]
     for i, lab in enumerate(labels_r):
         ax_r.text(
             0.5,
-            0.08 - i * 0.06,
+            0.06 - i * 0.06,
             lab,
             ha="center",
-            fontsize=11,
+            fontsize=14,
             color=C["green"],
             transform=ax_r.transAxes,
         )
 
     fig.suptitle(
-        "Why hebbmem?", fontsize=22, fontweight="bold", color=C["text"], y=0.98
+        "Why hebbmem?",
+        fontsize=26,
+        fontweight="bold",
+        color=C["text"],
+        y=0.98,
     )
     _save(fig, ASSETS / "diagrams" / "comparison.png")
 
 
+# ── Main ─────────────────────────────────────────────────────
+
+
 def main() -> None:
     print("Generating hebbmem visual assets...\n")
-
     gen_hero_banner()
     gen_how_it_works()
     gen_benchmark_results()
@@ -1035,8 +1382,8 @@ def main() -> None:
     gen_devto_cover()
     gen_architecture()
     gen_comparison()
-
-    print(f"\nDone! {sum(1 for _ in ASSETS.rglob('*.png'))} images generated.")
+    total = sum(1 for _ in ASSETS.rglob("*.png"))
+    print(f"\nDone! {total} images generated.")
 
 
 if __name__ == "__main__":
