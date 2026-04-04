@@ -1,0 +1,2 @@
+hebbmem>=0.4.0
+smolagents>=1.0
