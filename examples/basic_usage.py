@@ -12,10 +12,10 @@ def main():
     print("=== hebbmem basic usage ===\n")
 
     # Store memories with different importance levels
-    id1 = mem.store("Python is great for data science", importance=0.9)
-    id2 = mem.store("JavaScript powers the web", importance=0.7)
+    mem.store("Python is great for data science", importance=0.9)
+    mem.store("JavaScript powers the web", importance=0.7)
     id3 = mem.store("The weather is sunny today", importance=0.2)
-    id4 = mem.store("Machine learning uses Python heavily", importance=0.8)
+    mem.store("Machine learning uses Python heavily", importance=0.8)
     print(f"Stored 4 memories. Stats: {mem.stats()}\n")
 
     # Recall before any decay

@@ -12,6 +12,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 - Real-time animation of spreading activation, Hebbian reinforcement, and decay
 - Sample data loader for demo walkthrough
 - Dark theme with glowing node effects
+- Integration demos: Ollama, LangChain, OpenAI, CrewAI, smolagents
 
 ## [0.3.0] - 2026-04-04
 

@@ -6,7 +6,7 @@ to show how parameters affect memory behavior.
 Run with: python examples/custom_config.py
 """
 
-from hebbmem import HebbMem, Config
+from hebbmem import Config, HebbMem
 
 
 def compare_decay_rates():
@@ -29,7 +29,7 @@ def compare_decay_rates():
         r_slow = slow.recall("meeting", top_k=1)
         s_fast = r_fast[0].strength if r_fast else 0
         s_slow = r_slow[0].strength if r_slow else 0
-        print(f"  After {steps:2d} steps: fast_strength={s_fast:.4f}  slow_strength={s_slow:.4f}")
+        print(f"  After {steps:2d} steps: fast={s_fast:.4f} slow={s_slow:.4f}")
 
 
 def compare_hebbian_lr():
@@ -64,21 +64,25 @@ def compare_scoring_weights():
 
     sim_focused = HebbMem(
         encoder="hash",
-        config=Config(scoring_weights={
-            "activation": 0.1,
-            "similarity": 0.8,
-            "strength": 0.05,
-            "importance": 0.05,
-        }),
+        config=Config(
+            scoring_weights={
+                "activation": 0.1,
+                "similarity": 0.8,
+                "strength": 0.05,
+                "importance": 0.05,
+            }
+        ),
     )
     imp_focused = HebbMem(
         encoder="hash",
-        config=Config(scoring_weights={
-            "activation": 0.1,
-            "similarity": 0.1,
-            "strength": 0.1,
-            "importance": 0.7,
-        }),
+        config=Config(
+            scoring_weights={
+                "activation": 0.1,
+                "similarity": 0.1,
+                "strength": 0.1,
+                "importance": 0.7,
+            }
+        ),
     )
 
     for mem in [sim_focused, imp_focused]:
@@ -92,12 +96,14 @@ def compare_scoring_weights():
     r_sim = sim_focused.recall(query, top_k=2)
     print("  Similarity-focused ranking:")
     for r in r_sim:
-        print(f"    [{r.score:.3f}] {r.content} (sim={r.similarity:.2f}, imp={r.importance:.1f})")
+        sim, imp = r.similarity, r.importance
+        print(f"    [{r.score:.3f}] {r.content} (sim={sim:.2f}, imp={imp:.1f})")
 
     r_imp = imp_focused.recall(query, top_k=2)
     print("  Importance-focused ranking:")
     for r in r_imp:
-        print(f"    [{r.score:.3f}] {r.content} (sim={r.similarity:.2f}, imp={r.importance:.1f})")
+        sim, imp = r.similarity, r.importance
+        print(f"    [{r.score:.3f}] {r.content} (sim={sim:.2f}, imp={imp:.1f})")
 
 
 def main():

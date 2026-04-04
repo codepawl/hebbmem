@@ -138,6 +138,25 @@ See [`examples/`](examples/) for runnable scripts:
 - [`agent_integration.py`](examples/agent_integration.py) — using hebbmem as an agent's memory backend
 - [`custom_config.py`](examples/custom_config.py) — tuning decay, Hebbian learning, and scoring weights
 
+## Integrations
+
+hebbmem works with any agent framework. See [examples/integrations/](examples/integrations/) for runnable demos:
+
+- **Ollama** — Local chatbot with persistent memory, no API keys
+- **LangChain** — Drop-in replacement for ConversationBufferMemory
+- **OpenAI** — Persistent memory layer for stateless GPT calls
+- **CrewAI** — Shared memory between multiple agents
+- **smolagents** — HuggingFace lightweight agent with memory tools
+
+The integration pattern is always the same:
+
+```python
+mem = HebbMem()
+mem.store(user_input)
+context = mem.recall(query)
+mem.step()
+```
+
 ## Links
 
 - [GitHub](https://github.com/codepawl/hebbmem)

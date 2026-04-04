@@ -52,7 +52,7 @@ def main():
     for i, obs in enumerate(observations):
         agent.observe(obs)
         agent.tick()  # time passes between each observation
-        print(f"Turn {i+1}: observed '{obs}'")
+        print(f"Turn {i + 1}: observed '{obs}'")
 
     print(f"\nMemory stats: {agent.memory.stats()}")
     print()
