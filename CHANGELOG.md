@@ -1,0 +1,37 @@
+# Changelog
+
+All notable changes to hebbmem will be documented in this file.
+
+Format follows [Keep a Changelog](https://keepachangelog.com/).
+
+## [0.2.0] - 2026-04-04
+
+### Added
+- Persistence: `save()` and `HebbMem.load()` with single-file SQLite backend
+- Thread safety: all public methods are now thread-safe via RLock
+- `store_batch()` for bulk memory ingestion with vectorized encoding
+- Structured logging via stdlib `logging` module (logger name: `hebbmem`)
+- Custom exceptions: `HebbMemError`, `EncoderError`, `PersistenceError`, `MemoryNotFoundError`, `ConfigError`
+- `py.typed` PEP 561 marker for type checker support
+- Examples: `basic_usage.py`, `agent_integration.py`, `custom_config.py`
+- Comprehensive Google-style docstrings on all public APIs
+- CHANGELOG.md
+
+### Changed
+- `forget()` now raises `MemoryNotFoundError` instead of returning `False`
+- Unknown encoder strings now raise `EncoderError` instead of `ValueError`
+- `decay_all()` now returns the number of pruned edges
+
+## [0.1.0] - 2026-04-04
+
+### Added
+- Core memory system with three bio-inspired mechanisms:
+  - Temporal decay (Ebbinghaus forgetting curve)
+  - Hebbian learning (co-recalled memories strengthen connections)
+  - Spreading activation (recall propagates through memory graph)
+- `HebbMem` public API: `store()`, `recall()`, `step()`, `forget()`, `stats()`
+- Pluggable encoders: `SentenceTransformerEncoder`, `HashEncoder`
+- Auto-connect: new memories automatically link to similar existing ones
+- Configurable scoring weights, decay rates, and spread parameters
+- 48 tests, 97% coverage
+- CI/CD: GitHub Actions for testing (Python 3.10-3.12) and PyPI publishing

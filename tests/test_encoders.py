@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from hebbmem.encoders import HashEncoder, auto_select_encoder, EncoderBackend
+from hebbmem.encoders import EncoderBackend, HashEncoder, auto_select_encoder
 
 
 class TestHashEncoder:

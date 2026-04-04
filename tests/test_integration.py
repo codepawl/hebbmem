@@ -1,6 +1,6 @@
 """End-to-end integration tests for hebbmem."""
 
-from hebbmem import HebbMem, Config
+from hebbmem import Config, HebbMem
 
 
 class TestStoreRecallRoundtrip:
@@ -14,12 +14,8 @@ class TestStoreRecallRoundtrip:
         results = mem.recall("python programming", top_k=4)
         contents = [r.content for r in results]
         # Python-related memories should appear before weather
-        python_indices = [
-            i for i, c in enumerate(contents) if "python" in c.lower()
-        ]
-        weather_indices = [
-            i for i, c in enumerate(contents) if "weather" in c.lower()
-        ]
+        python_indices = [i for i, c in enumerate(contents) if "python" in c.lower()]
+        weather_indices = [i for i, c in enumerate(contents) if "weather" in c.lower()]
         if python_indices and weather_indices:
             assert min(python_indices) < min(weather_indices)
 
@@ -47,15 +43,11 @@ class TestTemporalDecay:
 
         # Recall to get baseline
         results_before = mem.recall("cats", top_k=1)
-        score_before = results_before[0].score if results_before else 0
-
         # Apply many decay steps
         mem.step(50)
 
         # The strength component should have decayed
         results_after = mem.recall("cats", top_k=1)
-        score_after = results_after[0].score if results_after else 0
-        # Note: recall re-activates, so activation recovers, but strength decays
         assert results_after[0].strength < results_before[0].strength
 
 
