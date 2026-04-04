@@ -1,14 +1,16 @@
-# Publishes to PyPI when a version tag (v*) is pushed.
+# FIRST-TIME SETUP:
+# 1. Go to https://pypi.org/manage/account/publishing/
+# 2. Add new pending publisher:
+#    - PyPI project name: hebbmem
+#    - Owner: codepawl
+#    - Repository: hebbmem
+#    - Workflow name: publish.yml
+#    - Environment name: pypi
+# 3. First publish will auto-create the project on PyPI.
 #
-# Uses Trusted Publishing (OIDC) — no API token needed in secrets.
-# One-time setup required on PyPI:
-#   1. Go to https://pypi.org/manage/project/hebbmem/settings/publishing/
-#      (or create the project first via manual upload / `twine upload`)
-#   2. Add a new "GitHub Actions" publisher:
-#      - Owner: codepawl
-#      - Repository: hebbmem
-#      - Workflow: publish.yml
-#      - Environment: pypi
+# If project already exists on PyPI (created via twine):
+# 1. Go to https://pypi.org/manage/project/hebbmem/settings/publishing/
+# 2. Add the same publisher config above.
 
 name: Publish to PyPI
 
@@ -17,7 +19,50 @@ on:
     tags: ["v*"]
 
 jobs:
+  test:
+    name: Pre-release Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv sync --all-extras
+      - run: uv run ruff check src/ tests/
+      - run: uv run mypy src/hebbmem/
+      - run: uv run pytest tests/ -v --cov=hebbmem --cov-fail-under=90
+
+  build:
+    name: Build Package
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Build sdist and wheel
+        run: uv build
+
+      - name: Verify package contents
+        run: |
+          echo "=== sdist contents ==="
+          tar tzf dist/*.tar.gz | head -30
+          echo "=== wheel contents ==="
+          unzip -l dist/*.whl | head -30
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
   publish:
+    name: Publish to PyPI
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -25,10 +70,9 @@ jobs:
       name: pypi
       url: https://pypi.org/p/hebbmem
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/download-artifact@v4
         with:
-          python-version: "3.12"
-      - run: pip install build
-      - run: python -m build
+          name: dist
+          path: dist/
+
       - uses: pypa/gh-action-pypi-publish@release/v1

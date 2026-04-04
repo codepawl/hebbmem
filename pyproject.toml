@@ -4,13 +4,13 @@ build-backend = "hatchling.build"
 
 [project]
 name = "hebbmem"
-version = "0.1.0"
+version = "0.2.0"
 description = "Hebbian memory for AI agents — memories that fire together wire together."
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
 authors = [{ name = "An", email = "an@codepawl.dev" }]
-keywords = ["ai", "agent", "memory", "hebbian", "neuroscience"]
+keywords = ["ai", "agent", "memory", "hebbian", "neuroscience", "spreading-activation"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -19,18 +19,27 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
 ]
 dependencies = ["numpy>=1.24"]
 
 [project.optional-dependencies]
-ml = ["sentence-transformers>=2.2"]
-dev = ["pytest>=7.0", "pytest-cov>=4.0"]
+embeddings = ["sentence-transformers>=2.2"]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "mypy>=1.0",
+    "ruff>=0.4",
+]
+all = ["hebbmem[embeddings,dev]"]
 
 [project.urls]
 Homepage = "https://github.com/codepawl/hebbmem"
 Repository = "https://github.com/codepawl/hebbmem"
 Issues = "https://github.com/codepawl/hebbmem/issues"
+Changelog = "https://github.com/codepawl/hebbmem/blob/main/CHANGELOG.md"
 
 [tool.hatch.build]
 exclude = [".claude/"]
@@ -43,3 +52,27 @@ testpaths = ["tests"]
 
 [tool.coverage.run]
 source = ["hebbmem"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "B", "SIM", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["hebbmem"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = "sentence_transformers.*"
+ignore_missing_imports = true
