@@ -11,3 +11,4 @@ build/
 .venv/
 .claude/
 *.hebb
+benchmarks/locomo/data/

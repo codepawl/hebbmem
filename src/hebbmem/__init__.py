@@ -14,7 +14,7 @@ from hebbmem.memory import HebbMem
 from hebbmem.node import MemoryNode
 from hebbmem.types import Config, Edge, RecallResult
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 __all__ = [
     "Config",
     "ConfigError",

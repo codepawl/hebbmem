@@ -4,6 +4,18 @@ All notable changes to hebbmem will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.1] - 2026-04-05
+
+### Added
+- LoCoMo benchmark (ACL 2024): real-world long-term conversation retrieval evaluation
+- Ablation configs: no-decay, no-Hebbian, no-spreading to prove each mechanism
+- Per-category breakdown: single-hop, multi-hop, temporal, open-domain
+
+### Fixed
+- graph_example.png: label overlap resolved with alternating above/below placement
+- x_thread_3.png: text overlap at bottom fixed, switched to horizontal bar layout
+- .gitignore: added `benchmarks/locomo/data/` for downloaded datasets
+
 ## [0.4.0] - 2026-04-04
 
 ### Added
