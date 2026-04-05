@@ -484,19 +484,19 @@ def gen_benchmark_results() -> None:
         [f"{s}\n({m})" for s, m in zip(scenarios, met, strict=True)],
         fontsize=14,
     )
-    ax.set_xlabel("Score", fontsize=16)
+    ax.set_xlabel("")
     ax.set_xlim(0, 0.90)
     ax.set_title(
-        "hebbmem vs Flat Vector Search",
+        "hebbmem vs Flat Vector Search\n",
         fontsize=24,
         fontweight="bold",
-        pad=20,
+        pad=10,
     )
     ax.text(
         0.5,
-        -0.08,
-        "Precision@K across 4 synthetic scenarios (HashEncoder)",
-        fontsize=14,
+        1.02,
+        "Precision@K across 4 synthetic scenarios",
+        fontsize=12,
         color=C["text2"],
         ha="center",
         transform=ax.transAxes,
