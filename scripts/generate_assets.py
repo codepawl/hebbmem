@@ -664,7 +664,7 @@ def gen_graph_example() -> None:
     ax.set_aspect("equal")
     ax.axis("off")
 
-    pos = nx.spring_layout(g, seed=42, k=2.5, iterations=80)
+    pos = nx.spring_layout(g, seed=42, k=3.5, iterations=100)
 
     # Edges
     for u, v, d in g.edges(data=True):
@@ -679,8 +679,9 @@ def gen_graph_example() -> None:
             zorder=1,
         )
 
-    # Nodes + labels
-    for nid in g.nodes():
+    # Nodes + labels (alternate above/below to avoid overlap)
+    node_ids = list(g.nodes())
+    for idx, nid in enumerate(node_ids):
         d = ndata[nid]
         act = d["act"]
         col = plt.cm.YlOrBr(  # type: ignore[attr-defined]
@@ -697,12 +698,16 @@ def gen_graph_example() -> None:
             linewidths=1 + d["imp"] * 2,
             zorder=3,
         )
+        # Alternate label above/below node
+        offset = -0.18 if idx % 2 == 0 else 0.15
+        va = "top" if offset < 0 else "bottom"
         ax.text(
             pos[nid][0],
-            pos[nid][1] - 0.14,
+            pos[nid][1] + offset,
             d["label"],
-            fontsize=11,
+            fontsize=10,
             ha="center",
+            va=va,
             color=C["text2"],
             zorder=4,
         )
@@ -1086,15 +1091,6 @@ def gen_x_thread_3() -> None:
         fontweight="bold",
         pad=20,
     )
-    ax.text(
-        0.5,
-        -0.10,
-        "Precision@K across 4 synthetic scenarios",
-        fontsize=16,
-        color=C["text2"],
-        ha="center",
-        transform=ax.transAxes,
-    )
     ax.legend(
         loc="lower right",
         fontsize=16,
@@ -1109,9 +1105,17 @@ def gen_x_thread_3() -> None:
 
     fig.text(
         0.5,
+        0.08,
+        "Precision@K | 4 synthetic scenarios",
+        fontsize=12,
+        color=C["text_dim"],
+        ha="center",
+    )
+    fig.text(
+        0.5,
         0.02,
         "pip install hebbmem",
-        fontsize=22,
+        fontsize=20,
         color=C["gold"],
         ha="center",
         family="monospace",
